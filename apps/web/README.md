@@ -1,13 +1,25 @@
 # @rre/web
 
-Operator, contributor, and reviewer React app (Vite + React 19 + TypeScript).
+Operator, contributor, and reviewer React app (Vite + React 19 + React Router).
 Served from S3 + CloudFront in production (engine ARCHITECTURE_AWS §4).
 
 ```bash
-pnpm --filter @rre/web dev       # http://localhost:5173
+pnpm --filter @rre/web dev       # http://localhost:5173, /api proxied to :3000
 ```
 
-Current: a placeholder shell that renders the readiness vocabulary via
-`@rre/ui`. Routes are built per the engine detailed design (documents 01–03),
-using the stable screen IDs (`PUB-*`, `AUTH-*`, `DASH-*`, `ENT-*`, `MAT-*`,
-`REQ-*`, `SUP-*`, `REV-*`, `SNP-*`, `EXP-*`, `AUD-*`, `SET-*`, `EXT-*`).
+Set `API_ORIGIN` to point the dev proxy elsewhere.
+
+## Routes (so far)
+
+| Path | Screen | Talks to |
+| --- | --- | --- |
+| `/` | Control-pack list | `GET /api/v1/packs` |
+| `/w/entities/new` | **ENT-001** — create a regulated entity; the scope-fact form is generated from the pack's fact schema | `GET /api/v1/packs/:packKey`, `POST /api/v1/entities` |
+| `/w/entities/:id/matrix` | **MAT-001** — the per-control applicability matrix, honest state counts, filter by result | `GET /api/v1/entities/:id/matrix` |
+
+The workspace (tenant) is a dev stand-in in the header, persisted per browser and
+sent as `x-tenant-id`. The matrix never shows a "% compliant" — it shows how many
+controls are required by the snapshot and why the rest are excluded.
+
+Shared UI (`@rre/ui`): `ReadinessChip`, `ApplicabilityChip` — text + colour, throw
+on an unknown value.

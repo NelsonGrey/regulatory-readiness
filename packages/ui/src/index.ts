@@ -8,3 +8,5 @@
  */
 export { ReadinessChip } from './readiness-chip.js'
 export type { ReadinessChipProps } from './readiness-chip.js'
+export { ApplicabilityChip } from './applicability-chip.js'
+export type { ApplicabilityChipProps } from './applicability-chip.js'
