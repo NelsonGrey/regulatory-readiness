@@ -16,6 +16,7 @@
     "@rre/authorization": "workspace:*",
     "@rre/contracts": "workspace:*",
     "@rre/control-catalog": "workspace:*",
+    "@rre/db": "workspace:*",
     "@rre/domain": "workspace:*",
     "@rre/observability": "workspace:*",
     "fastify": "^5.2.0",

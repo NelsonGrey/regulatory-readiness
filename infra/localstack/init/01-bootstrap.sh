@@ -24,7 +24,8 @@ for queue in \
   rre-dev-ocr \
   rre-dev-extraction \
   rre-dev-export \
-  rre-dev-notify
+  rre-dev-notify \
+  rre-dev-events
 do
   awslocal sqs create-queue --queue-name "$queue" >/dev/null
   awslocal sqs create-queue --queue-name "${queue}-dlq" >/dev/null

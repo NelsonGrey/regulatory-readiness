@@ -4,9 +4,7 @@ import { fileURLToPath } from 'node:url'
 import type { Pool } from 'pg'
 
 /** Repo `migrations/` directory (dev path; override for a bundled runtime). */
-export const DEFAULT_MIGRATIONS_DIR = fileURLToPath(
-  new URL('../../../../migrations', import.meta.url),
-)
+export const DEFAULT_MIGRATIONS_DIR = fileURLToPath(new URL('../../../migrations', import.meta.url))
 
 /**
  * Forward-only SQL migrations (engine Handoff §9). Each `NNNN_*.sql` file runs

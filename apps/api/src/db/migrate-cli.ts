@@ -1,5 +1,4 @@
-import { createPool } from './pool.js'
-import { migrate } from './migrate.js'
+import { createPool, migrate } from '@rre/db'
 
 const url = process.env.DATABASE_URL
 if (!url) {

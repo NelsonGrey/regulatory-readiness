@@ -1,8 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import type { Pool } from 'pg'
 import type { EntityScopeEvaluation, RegulatedEntity } from '@rre/domain'
-import { createPool, withTenant } from '../db/pool.js'
-import { migrate } from '../db/migrate.js'
+import { createPool, migrate, withTenant } from '@rre/db'
 import { pgUnitOfWork, type UnitOfWork } from '../db/uow.js'
 
 const adminUrl = process.env.TEST_DATABASE_URL

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { Pool } from 'pg'
 import type { EntityScopeEvaluation, RegulatedEntity } from '@rre/domain'
-import { withTenant } from './pool.js'
+import { withTenant } from '@rre/db'
 import { PgEntityRepository } from '../repositories/entities.pg.js'
 import type { EntityRepository } from '../services/entities.js'
 

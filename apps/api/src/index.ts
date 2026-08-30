@@ -1,7 +1,6 @@
 import { createLogger, type LogLevel } from '@rre/observability'
 import { buildApp } from './app.js'
-import { createPool } from './db/pool.js'
-import { migrate } from './db/migrate.js'
+import { createPool, migrate } from '@rre/db'
 import {
   createInMemoryStores,
   inMemoryUnitOfWork,
