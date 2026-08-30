@@ -25,7 +25,7 @@ The platform is **one reusable engine** plus a library of **control packs**. Eac
 
 ## Current state
 
-Full specification, a buildable monorepo, and the first slice of real engine code. `typecheck` / `lint` / `test` (52) / `build` / `format` all green.
+Full specification, a buildable monorepo, and the first slice of real engine code. `typecheck` / `lint` / `test` (65) / `build` / `format` all green.
 
 - **Spec** — engine spec split from the origin battery package into [`docs/engine/`](docs/engine/) + [`docs/packs/espr-dpp-battery/`](docs/packs/espr-dpp-battery/) (see [ENGINE_CONCEPT.md §9](docs/ENGINE_CONCEPT.md)); pack #1 spec in [`docs/packs/eaa-accessibility/`](docs/packs/eaa-accessibility/); ADRs 0001–0005 in [`docs/adr/`](docs/adr/).
 - **Scaffold** — pnpm/TypeScript monorepo (`apps/{api,worker,web}`, `packages/*`, `packs/`, `infra/`) with a local Docker dev stack (Postgres + LocalStack).
@@ -35,10 +35,11 @@ Full specification, a buildable monorepo, and the first slice of real engine cod
   - `@rre/control-catalog` — `loadPack` / `validatePack` / `loadInstalledPacks`, `validateEntityFacts`, and the deterministic applicability evaluator.
   - `@rre/domain` — readiness-state derivation, canonical-JSON, entity types + applicability summary (browser-safe).
   - `@rre/api` — `GET /api/v1/packs` (registry-backed); **`POST /api/v1/entities`** creates a regulated entity with an immutable, hashed scope evaluation, and **`GET /api/v1/entities/:id/matrix`** returns the per-control applicability matrix + honest state counts. Tenant comes from `x-tenant-id` (dev stand-in for OIDC + RLS); cross-tenant reads 404.
-  - **Persistence** — `migrations/0001_init.sql` (entities + scope evaluations, `tenant_id` + `pack_key`, RLS `FORCE`d) and `0002_app_role.sql` (non-superuser `rre_app` runtime role); a forward-only SQL migration runner (`pnpm db:migrate`); `PgEntityRepository` connects as `rre_app` inside a `SET LOCAL app.tenant_id` transaction. An integration test proves a raw cross-tenant `SELECT` returns zero rows and a cross-tenant `INSERT` is rejected by RLS `WITH CHECK` — it runs when `TEST_DATABASE_URL` is set (CI Postgres service) and skips cleanly otherwise. In-memory storage remains the no-DB fallback.
-  - 52 tests across 12 projects.
+  - **Persistence** — migrations `0001` (entities + scope evaluations, `tenant_id` + `pack_key`, RLS `FORCE`d), `0002` (non-superuser `rre_app` runtime role), `0003` (append-only `audit_event` + transactional `outbox`, both RLS-scoped); forward-only SQL runner (`pnpm db:migrate`).
+  - **Unit of work** (ADR 0004) — `pgUnitOfWork` / `inMemoryUnitOfWork`: business writes + the audit event + outbox messages commit in **one tenant-scoped transaction** or not at all. `EntityService.create` records an `entity.created` audit event and enqueues `entity.readiness_evaluated`.
+  - **Testing** — 65 tests / 15 projects. Unit: uow atomicity, service audit/outbox wiring, applicability evaluator, pack validation, readiness derivation, capability matrix. Integration (Postgres, `TEST_DATABASE_URL`, else skipped): RLS hides cross-tenant rows entirely, `WITH CHECK` rejects cross-tenant inserts, a failed uow rolls back the entity **and** its audit event, `audit_event` `UPDATE`/`DELETE` denied to `rre_app` (append-only), `pack_key` isolation. **UAT** (`apps/api/src/acceptance/`): Given/When/Then scenarios for `AC-003` (scope + applicability recorded, no silent pack fallback) and `AC-004` (counts reconcile, neutral states not counted, no "compliant"/"certified" language).
 
-Next: adversarial cross-**pack** isolation coverage (`AC-025` at the DB layer), the audit-event + outbox tables and the unit-of-work wrapper (ADR 0004), then the operator web shell and the `ENT-001` / `MAT-001` screens.
+Next: the audit-read endpoint (`AUD-001`), the outbox relay worker + LocalStack SQS, then the operator web shell and the `ENT-001` / `MAT-001` screens against these endpoints.
 
 ## Build and develop
 

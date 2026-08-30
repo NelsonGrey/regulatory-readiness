@@ -1,11 +1,10 @@
+import type { PoolClient } from 'pg'
 import type {
   ControlApplicabilityRecord,
   EntityFacts,
   EntityScopeEvaluation,
   RegulatedEntity,
 } from '@rre/domain'
-import type { Pool } from 'pg'
-import { withTenant } from '../db/pool.js'
 import type { EntityRepository } from '../services/entities.js'
 
 interface EntityRow {
@@ -64,71 +63,73 @@ function toEvaluation(r: EvaluationRow): EntityScopeEvaluation {
   }
 }
 
-/** Tenant-scoped, RLS-backed persistence for regulated entities (ADR 0002). */
+/**
+ * Tenant-scoped persistence for regulated entities. Constructed by the unit of
+ * work with a client already inside a transaction that has `app.tenant_id` set,
+ * so RLS enforces isolation; the `tenant_id = $` predicate is defense in depth.
+ */
 export class PgEntityRepository implements EntityRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(
+    private readonly db: PoolClient,
+    private readonly tenantId: string,
+  ) {}
 
   async create(entity: RegulatedEntity, evaluation: EntityScopeEvaluation): Promise<void> {
-    await withTenant(this.pool, entity.tenantId, async (c) => {
-      await c.query(
-        `INSERT INTO regulated_entity
-           (id, tenant_id, pack_key, name, entity_identifier, entity_kind,
-            created_at, created_by, current_evaluation_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-        [
-          entity.id,
-          entity.tenantId,
-          entity.packKey,
-          entity.name,
-          entity.entityIdentifier,
-          entity.entityKind,
-          entity.createdAt,
-          entity.createdBy,
-          entity.currentEvaluationId,
-        ],
-      )
-      await c.query(
-        `INSERT INTO entity_scope_evaluation
-           (id, entity_id, tenant_id, pack_key, snapshot_key, version,
-            facts, results, evaluated_at, evaluated_by, hash)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-        [
-          evaluation.id,
-          evaluation.entityId,
-          evaluation.tenantId,
-          evaluation.packKey,
-          evaluation.snapshotKey,
-          evaluation.version,
-          JSON.stringify(evaluation.facts),
-          JSON.stringify(evaluation.results),
-          evaluation.evaluatedAt,
-          evaluation.evaluatedBy,
-          evaluation.hash,
-        ],
-      )
-    })
+    await this.db.query(
+      `INSERT INTO regulated_entity
+         (id, tenant_id, pack_key, name, entity_identifier, entity_kind,
+          created_at, created_by, current_evaluation_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [
+        entity.id,
+        entity.tenantId,
+        entity.packKey,
+        entity.name,
+        entity.entityIdentifier,
+        entity.entityKind,
+        entity.createdAt,
+        entity.createdBy,
+        entity.currentEvaluationId,
+      ],
+    )
+    await this.db.query(
+      `INSERT INTO entity_scope_evaluation
+         (id, entity_id, tenant_id, pack_key, snapshot_key, version,
+          facts, results, evaluated_at, evaluated_by, hash)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [
+        evaluation.id,
+        evaluation.entityId,
+        evaluation.tenantId,
+        evaluation.packKey,
+        evaluation.snapshotKey,
+        evaluation.version,
+        JSON.stringify(evaluation.facts),
+        JSON.stringify(evaluation.results),
+        evaluation.evaluatedAt,
+        evaluation.evaluatedBy,
+        evaluation.hash,
+      ],
+    )
   }
 
   async get(
-    tenantId: string,
     id: string,
   ): Promise<{ entity: RegulatedEntity; evaluation: EntityScopeEvaluation } | null> {
-    return withTenant(this.pool, tenantId, async (c) => {
-      const entityRes = await c.query<EntityRow>(
-        `SELECT * FROM regulated_entity WHERE id = $1 AND tenant_id = $2`,
-        [id, tenantId],
-      )
-      const row = entityRes.rows[0]
-      if (!row) return null
+    const entityRes = await this.db.query<EntityRow>(
+      `SELECT * FROM regulated_entity WHERE id = $1 AND tenant_id = $2`,
+      [id, this.tenantId],
+    )
+    const row = entityRes.rows[0]
+    if (!row) return null
 
-      const evalRes = await c.query<EvaluationRow>(
-        `SELECT * FROM entity_scope_evaluation WHERE id = $1 AND tenant_id = $2`,
-        [row.current_evaluation_id, tenantId],
-      )
-      const evalRow = evalRes.rows[0]
-      if (!evalRow) return null
+    const evalRes = await this.db.query<EvaluationRow>(
+      `SELECT * FROM entity_scope_evaluation WHERE id = $1 AND tenant_id = $2`,
+      [row.current_evaluation_id, this.tenantId],
+    )
+    const evalRow = evalRes.rows[0]
+    if (!evalRow) return null
 
-      return { entity: toEntity(row), evaluation: toEvaluation(evalRow) }
-    })
+    return { entity: toEntity(row), evaluation: toEvaluation(evalRow) }
   }
 }

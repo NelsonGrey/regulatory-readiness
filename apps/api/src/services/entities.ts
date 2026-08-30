@@ -12,43 +12,17 @@ import {
 } from '@rre/domain'
 import type { AuthContext } from '../auth.js'
 import type { PackRegistry } from '../pack-registry.js'
+import type { UnitOfWork } from '../db/uow.js'
 
 /** `sha256:<hex>` over the canonical form of a scope evaluation (engine AC-003). */
 function computeEvaluationHash(input: EvaluationDigestInput): string {
   return `sha256:${createHash('sha256').update(canonicalJson(input)).digest('hex')}`
 }
 
-/**
- * Persistence port. `InMemoryEntityRepository` is a placeholder for the Postgres
- * repository (tenant-scoped, RLS-backed) that lands with the DB slice.
- */
+/** Transaction-scoped persistence port for regulated entities (the caller owns the transaction). */
 export interface EntityRepository {
   create(entity: RegulatedEntity, evaluation: EntityScopeEvaluation): Promise<void>
-  get(
-    tenantId: string,
-    id: string,
-  ): Promise<{ entity: RegulatedEntity; evaluation: EntityScopeEvaluation } | null>
-}
-
-export class InMemoryEntityRepository implements EntityRepository {
-  private readonly entities = new Map<string, RegulatedEntity>()
-  private readonly evaluations = new Map<string, EntityScopeEvaluation>()
-
-  async create(entity: RegulatedEntity, evaluation: EntityScopeEvaluation): Promise<void> {
-    this.entities.set(entity.id, entity)
-    this.evaluations.set(evaluation.id, evaluation)
-  }
-
-  async get(
-    tenantId: string,
-    id: string,
-  ): Promise<{ entity: RegulatedEntity; evaluation: EntityScopeEvaluation } | null> {
-    const entity = this.entities.get(id)
-    if (!entity || entity.tenantId !== tenantId) return null
-    const evaluation = this.evaluations.get(entity.currentEvaluationId)
-    if (!evaluation) return null
-    return { entity, evaluation }
-  }
+  get(id: string): Promise<{ entity: RegulatedEntity; evaluation: EntityScopeEvaluation } | null>
 }
 
 export type CreateEntityFailure =
@@ -81,7 +55,7 @@ export interface EntityMatrix {
 
 export class EntityService {
   constructor(
-    private readonly repo: EntityRepository,
+    private readonly uow: UnitOfWork,
     private readonly packs: PackRegistry,
   ) {}
 
@@ -116,6 +90,7 @@ export class EntityService {
     const results = evaluateApplicability(pack.loaded.applicability, controls, facts, {
       snapshotKey,
     })
+    const summary = summariseApplicability(results)
 
     const entityId = `ent_${randomUUID()}`
     const evaluationId = `eval_${randomUUID()}`
@@ -147,42 +122,69 @@ export class EntityService {
       currentEvaluationId: evaluationId,
     }
 
-    await this.repo.create(entity, evaluation)
-    return { ok: true, entity, evaluation }
+    return this.uow(auth.tenantId, async (u) => {
+      await u.entities.create(entity, evaluation)
+      await u.audit({
+        actorType: 'user',
+        actorId: auth.actor,
+        action: 'entity.created',
+        targetType: 'regulated_entity',
+        targetId: entity.id,
+        occurredAt: at,
+        metadata: {
+          packKey: req.packKey,
+          snapshotKey,
+          evaluationHash: evaluation.hash,
+          requiredNow: summary.requiredNow,
+          notApplicable: summary.notApplicable,
+        },
+      })
+      await u.enqueue('entity.readiness_evaluated', {
+        entityId: entity.id,
+        tenantId: auth.tenantId,
+        packKey: req.packKey,
+        snapshotKey,
+        evaluationHash: evaluation.hash,
+        summary,
+      })
+      return { ok: true, entity, evaluation } satisfies CreateEntityResult
+    })
   }
 
   async matrix(auth: AuthContext, id: string): Promise<EntityMatrix | null> {
-    const found = await this.repo.get(auth.tenantId, id)
-    if (!found) return null
+    return this.uow(auth.tenantId, async (u) => {
+      const found = await u.entities.get(id)
+      if (!found) return null
 
-    const pack = this.packs.get(found.entity.packKey)
-    const meta = new Map((pack?.loaded?.controls ?? []).map((c) => [c.key, c]))
+      const pack = this.packs.get(found.entity.packKey)
+      const meta = new Map((pack?.loaded?.controls ?? []).map((c) => [c.key, c]))
 
-    const rows: MatrixRow[] = found.evaluation.results.map((r) => {
-      const c = meta.get(r.control)
+      const rows: MatrixRow[] = found.evaluation.results.map((r) => {
+        const c = meta.get(r.control)
+        return {
+          control: r.control,
+          title: c?.title ?? r.control,
+          family: c?.family ?? 'unknown',
+          standardClause: c?.standardClause ?? null,
+          wcagSc: c?.wcagSc ?? null,
+          accessClassDefault: c?.accessClassDefault ?? 'PUBLIC_CANDIDATE',
+          applicability: r.result,
+          reason: r.reason,
+        }
+      })
+
       return {
-        control: r.control,
-        title: c?.title ?? r.control,
-        family: c?.family ?? 'unknown',
-        standardClause: c?.standardClause ?? null,
-        wcagSc: c?.wcagSc ?? null,
-        accessClassDefault: c?.accessClassDefault ?? 'PUBLIC_CANDIDATE',
-        applicability: r.result,
-        reason: r.reason,
+        entity: found.entity,
+        evaluation: {
+          id: found.evaluation.id,
+          snapshotKey: found.evaluation.snapshotKey,
+          evaluatedAt: found.evaluation.evaluatedAt,
+          hash: found.evaluation.hash,
+          version: found.evaluation.version,
+        },
+        summary: summariseApplicability(found.evaluation.results),
+        rows,
       }
     })
-
-    return {
-      entity: found.entity,
-      evaluation: {
-        id: found.evaluation.id,
-        snapshotKey: found.evaluation.snapshotKey,
-        evaluatedAt: found.evaluation.evaluatedAt,
-        hash: found.evaluation.hash,
-        version: found.evaluation.version,
-      },
-      summary: summariseApplicability(found.evaluation.results),
-      rows,
-    }
   }
 }

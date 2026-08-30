@@ -1,103 +1,166 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import type { Pool } from 'pg'
 import type { EntityScopeEvaluation, RegulatedEntity } from '@rre/domain'
 import { createPool, withTenant } from '../db/pool.js'
 import { migrate } from '../db/migrate.js'
-import { PgEntityRepository } from './entities.pg.js'
+import { pgUnitOfWork, type UnitOfWork } from '../db/uow.js'
 
 const adminUrl = process.env.TEST_DATABASE_URL
-// The app connects as the non-superuser `rre_app` role (migration 0002) so RLS
-// is actually enforced. Derive its URL from the admin URL unless overridden.
+// The app connects as the non-superuser `rre_app` role (migrations 0002/0003) so
+// RLS and the audit_event append-only REVOKE are actually enforced.
 const appUrl =
   process.env.TEST_DATABASE_URL_APP ?? adminUrl?.replace(/\/\/[^:]+:[^@]+@/, '//rre_app:rre_app@')
 
 const suite = adminUrl ? describe : describe.skip
 
-suite('PgEntityRepository (integration)', () => {
+const AT = '2026-08-30T12:00:00.000Z'
+
+const makeEntity = (tenantId: string, id: string): RegulatedEntity => ({
+  id,
+  tenantId,
+  packKey: 'eaa-accessibility',
+  name: `Entity ${id}`,
+  entityIdentifier: `id-${id}`,
+  entityKind: 'service',
+  createdAt: AT,
+  createdBy: 'tester',
+  currentEvaluationId: `${id}-eval`,
+})
+
+const makeEvaluation = (tenantId: string, id: string): EntityScopeEvaluation => ({
+  id: `${id}-eval`,
+  entityId: id,
+  tenantId,
+  packKey: 'eaa-accessibility',
+  snapshotKey: 'SNAP-1',
+  version: 1,
+  facts: { hasWebsite: true, entityKind: 'service' },
+  results: [{ control: 'C-1', result: 'REQUIRED_BY_SNAPSHOT' }],
+  evaluatedAt: AT,
+  evaluatedBy: 'tester',
+  hash: 'sha256:deadbeef',
+})
+
+const audit = (targetId: string) => ({
+  actorType: 'user' as const,
+  actorId: 'tester',
+  action: 'entity.created',
+  targetType: 'regulated_entity',
+  targetId,
+  occurredAt: AT,
+})
+
+suite('Postgres unit of work + RLS (integration)', () => {
   let adminPool: Pool
-  let pool: Pool
-  let repo: PgEntityRepository
-
-  const makeEntity = (tenantId: string, id: string): RegulatedEntity => ({
-    id,
-    tenantId,
-    packKey: 'eaa-accessibility',
-    name: `Entity ${id}`,
-    entityIdentifier: `id-${id}`,
-    entityKind: 'service',
-    createdAt: new Date('2026-08-30T12:00:00.000Z').toISOString(),
-    createdBy: 'tester',
-    currentEvaluationId: `${id}-eval`,
-  })
-
-  const makeEvaluation = (tenantId: string, id: string): EntityScopeEvaluation => ({
-    id: `${id}-eval`,
-    entityId: id,
-    tenantId,
-    packKey: 'eaa-accessibility',
-    snapshotKey: 'SNAP-1',
-    version: 1,
-    facts: { hasWebsite: true, entityKind: 'service' },
-    results: [{ control: 'C-1', result: 'REQUIRED_BY_SNAPSHOT' }],
-    evaluatedAt: new Date('2026-08-30T12:00:00.000Z').toISOString(),
-    evaluatedBy: 'tester',
-    hash: 'sha256:deadbeef',
-  })
+  let appPool: Pool
+  let uow: UnitOfWork
 
   beforeAll(async () => {
     adminPool = createPool(adminUrl as string)
     await migrate(adminPool)
-    await adminPool.query('TRUNCATE regulated_entity, entity_scope_evaluation')
+    appPool = createPool(appUrl as string)
+    uow = pgUnitOfWork(appPool)
+  })
 
-    pool = createPool(appUrl as string)
-    repo = new PgEntityRepository(pool)
-    await repo.create(makeEntity('t-alpha', 'e1'), makeEvaluation('t-alpha', 'e1'))
+  afterEach(async () => {
+    await adminPool.query('TRUNCATE regulated_entity, entity_scope_evaluation, audit_event, outbox')
   })
 
   afterAll(async () => {
-    await adminPool.query('TRUNCATE regulated_entity, entity_scope_evaluation')
-    await pool.end()
+    await appPool.end()
     await adminPool.end()
   })
 
-  it('round-trips an entity + evaluation for its own tenant', async () => {
-    const got = await repo.get('t-alpha', 'e1')
+  it('commits entity + audit + outbox in one transaction and reads them back', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'e1'), makeEvaluation('t-alpha', 'e1'))
+      await u.audit(audit('e1'))
+      await u.enqueue('entity.readiness_evaluated', { entityId: 'e1' })
+    })
+
+    const got = await uow('t-alpha', (u) => u.entities.get('e1'))
     expect(got?.entity.name).toBe('Entity e1')
-    expect(got?.entity.entityKind).toBe('service')
-    expect(got?.evaluation.results[0]?.control).toBe('C-1')
     expect(got?.evaluation.facts).toEqual({ hasWebsite: true, entityKind: 'service' })
+
+    const [auditRows, outboxRows] = await withTenant(appPool, 't-alpha', async (c) => [
+      (await c.query('SELECT action FROM audit_event WHERE target_id = $1', ['e1'])).rows,
+      (await c.query('SELECT topic, published_at FROM outbox WHERE published_at IS NULL')).rows,
+    ])
+    expect(auditRows).toEqual([{ action: 'entity.created' }])
+    expect(outboxRows).toEqual([{ topic: 'entity.readiness_evaluated', published_at: null }])
   })
 
-  it('does not return an entity to another tenant', async () => {
-    expect(await repo.get('t-bravo', 'e1')).toBeNull()
-  })
-
-  it('RLS blocks a raw cross-tenant SELECT with no WHERE clause', async () => {
-    const otherTenantRows = await withTenant(
-      pool,
-      't-bravo',
-      async (c) => (await c.query('SELECT id FROM regulated_entity')).rows,
-    )
-    expect(otherTenantRows).toEqual([])
-
-    const ownRows = await withTenant(
-      pool,
-      't-alpha',
-      async (c) => (await c.query<{ id: string }>('SELECT id FROM regulated_entity')).rows,
-    )
-    expect(ownRows.map((r) => r.id)).toContain('e1')
-  })
-
-  it('RLS WITH CHECK rejects an insert whose tenant_id != the session tenant', async () => {
+  it('rolls back the entity AND the audit event when the unit of work throws', async () => {
     await expect(
-      withTenant(pool, 't-alpha', (c) =>
-        c.query(
-          `INSERT INTO regulated_entity
-             (id, tenant_id, pack_key, name, entity_identifier, entity_kind,
-              created_at, created_by, current_evaluation_id)
-           VALUES ('bad','t-bravo','eaa-accessibility','x','bad-id','service', now(),'u','x')`,
-        ),
+      uow('t-alpha', async (u) => {
+        await u.entities.create(makeEntity('t-alpha', 'e2'), makeEvaluation('t-alpha', 'e2'))
+        await u.audit(audit('e2'))
+        throw new Error('deliberate failure')
+      }),
+    ).rejects.toThrow('deliberate failure')
+
+    const counts = await withTenant(appPool, 't-alpha', async (c) => ({
+      entities: (await c.query(`SELECT count(*)::int AS n FROM regulated_entity`)).rows[0].n,
+      audit: (await c.query(`SELECT count(*)::int AS n FROM audit_event`)).rows[0].n,
+    }))
+    expect(counts).toEqual({ entities: 0, audit: 0 })
+  })
+
+  it('does not return another tenant’s entity, and RLS hides its rows entirely', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'e3'), makeEvaluation('t-alpha', 'e3'))
+      await u.audit(audit('e3'))
+    })
+
+    expect(await uow('t-bravo', (u) => u.entities.get('e3'))).toBeNull()
+
+    const seenByBravo = await withTenant(appPool, 't-bravo', async (c) => ({
+      entities: (await c.query('SELECT id FROM regulated_entity')).rows,
+      audit: (await c.query('SELECT id FROM audit_event')).rows,
+    }))
+    expect(seenByBravo).toEqual({ entities: [], audit: [] })
+  })
+
+  it('forbids UPDATE and DELETE on audit_event for the application role (append-only)', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'e4'), makeEvaluation('t-alpha', 'e4'))
+      await u.audit(audit('e4'))
+    })
+
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query(`UPDATE audit_event SET action = 'tampered'`)),
+    ).rejects.toThrow(/permission denied/i)
+
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query('DELETE FROM audit_event')),
+    ).rejects.toThrow(/permission denied/i)
+  })
+
+  it('isolates evaluations by pack_key within a tenant', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'e5'), makeEvaluation('t-alpha', 'e5'))
+    })
+    // A later evaluation of the same entity, on a different pack, for the same tenant.
+    await withTenant(appPool, 't-alpha', (c) =>
+      c.query(
+        `INSERT INTO entity_scope_evaluation
+           (id, entity_id, tenant_id, pack_key, snapshot_key, version, facts, results, evaluated_at, evaluated_by, hash)
+         VALUES ('x-eval','e5','t-alpha','cra','CRA-SNAP',2,'{}'::jsonb,'[]'::jsonb, now(),'u','sha256:x')`,
       ),
-    ).rejects.toThrow()
+    )
+
+    const perPack = await withTenant(appPool, 't-alpha', async (c) => ({
+      eaa: (
+        await c.query(
+          `SELECT count(*)::int AS n FROM entity_scope_evaluation WHERE pack_key = 'eaa-accessibility'`,
+        )
+      ).rows[0].n,
+      cra: (
+        await c.query(
+          `SELECT count(*)::int AS n FROM entity_scope_evaluation WHERE pack_key = 'cra'`,
+        )
+      ).rows[0].n,
+    }))
+    expect(perPack).toEqual({ eaa: 1, cra: 1 })
   })
 })

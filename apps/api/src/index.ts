@@ -2,8 +2,12 @@ import { createLogger, type LogLevel } from '@rre/observability'
 import { buildApp } from './app.js'
 import { createPool } from './db/pool.js'
 import { migrate } from './db/migrate.js'
-import { PgEntityRepository } from './repositories/entities.pg.js'
-import { InMemoryEntityRepository, type EntityRepository } from './services/entities.js'
+import {
+  createInMemoryStores,
+  inMemoryUnitOfWork,
+  pgUnitOfWork,
+  type UnitOfWork,
+} from './db/uow.js'
 
 function parseLogLevel(value: string | undefined): LogLevel {
   return value === 'debug' || value === 'info' || value === 'warn' || value === 'error'
@@ -17,7 +21,7 @@ const log = createLogger({ level: logLevel, base: { component: 'api' } })
 async function main(): Promise<void> {
   const port = Number(process.env.API_PORT ?? 3000)
 
-  let entityRepository: EntityRepository
+  let unitOfWork: UnitOfWork
   const databaseUrl = process.env.DATABASE_URL
   if (databaseUrl) {
     // Migrations run as the owner (DATABASE_URL); the app connects as the
@@ -26,15 +30,13 @@ async function main(): Promise<void> {
     const ran = await migrate(migrationPool)
     log.info('migrations', { applied: ran })
     await migrationPool.end()
-    entityRepository = new PgEntityRepository(
-      createPool(process.env.APP_DATABASE_URL ?? databaseUrl),
-    )
+    unitOfWork = pgUnitOfWork(createPool(process.env.APP_DATABASE_URL ?? databaseUrl))
   } else {
-    log.warn('DATABASE_URL not set — using in-memory entity storage')
-    entityRepository = new InMemoryEntityRepository()
+    log.warn('DATABASE_URL not set — using in-memory storage')
+    unitOfWork = inMemoryUnitOfWork(createInMemoryStores())
   }
 
-  const app = buildApp({ logLevel, entityRepository })
+  const app = buildApp({ logLevel, unitOfWork })
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.on(signal, () => {

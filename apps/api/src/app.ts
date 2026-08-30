@@ -2,11 +2,8 @@ import { fileURLToPath } from 'node:url'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { createLogger, type LogLevel } from '@rre/observability'
 import { getPackRegistry, type PackRegistry } from './pack-registry.js'
-import {
-  EntityService,
-  InMemoryEntityRepository,
-  type EntityRepository,
-} from './services/entities.js'
+import { createInMemoryStores, inMemoryUnitOfWork, type UnitOfWork } from './db/uow.js'
+import { EntityService } from './services/entities.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerPackRoutes } from './routes/packs.js'
 import { registerEntityRoutes } from './routes/entities.js'
@@ -20,8 +17,8 @@ export interface BuildAppOptions {
   packsDir?: string
   /** Pre-loaded pack registry (tests). Otherwise loaded and memoised from `packsDir`. */
   packRegistry?: PackRegistry
-  /** Entity persistence (tests). Defaults to an in-memory repository. */
-  entityRepository?: EntityRepository
+  /** Unit-of-work runner (persistence + audit + outbox). Defaults to a fresh in-memory one. */
+  unitOfWork?: UnitOfWork
 }
 
 /**
@@ -32,6 +29,7 @@ export interface BuildAppOptions {
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const log = createLogger({ level: options.logLevel ?? 'info', base: { component: 'api' } })
   const packsDir = options.packsDir ?? process.env.PACKS_DIR ?? DEFAULT_PACKS_DIR
+  const unitOfWork = options.unitOfWork ?? inMemoryUnitOfWork(createInMemoryStores())
 
   const app = Fastify({ logger: false })
 
@@ -44,10 +42,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.register(
     async (v1) => {
       const registry = options.packRegistry ?? (await getPackRegistry(packsDir))
-      const entities = new EntityService(
-        options.entityRepository ?? new InMemoryEntityRepository(),
-        registry,
-      )
+      const entities = new EntityService(unitOfWork, registry)
       await registerPackRoutes(v1, { registry })
       await registerEntityRoutes(v1, { entities })
     },
