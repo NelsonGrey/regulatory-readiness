@@ -1,0 +1,138 @@
+{
+  "packKey": "eaa-accessibility",
+  "facts": [
+    {
+      "name": "offeredToConsumersInIE",
+      "type": "boolean",
+      "required": true,
+      "description": "Is the product or service offered to consumers in Ireland?"
+    },
+    {
+      "name": "entityKind",
+      "type": "enum",
+      "enumValues": ["product", "service"],
+      "required": true,
+      "description": "Whether the regulated entity is an EAA product or an EAA service."
+    },
+    {
+      "name": "serviceType",
+      "type": "enum",
+      "enumValues": [
+        "ecommerce",
+        "consumer_banking",
+        "ebooks_and_reading_software",
+        "electronic_communications",
+        "access_to_avms",
+        "passenger_transport_air",
+        "passenger_transport_bus",
+        "passenger_transport_rail",
+        "passenger_transport_waterborne",
+        "emergency_communications_112"
+      ],
+      "required": false,
+      "description": "Required when entityKind = service."
+    },
+    {
+      "name": "productType",
+      "type": "enum",
+      "enumValues": [
+        "general_purpose_computer_os",
+        "payment_terminal",
+        "self_service_terminal_atm",
+        "self_service_terminal_ticketing",
+        "self_service_terminal_checkin",
+        "interactive_info_terminal",
+        "consumer_terminal_equipment_ecs",
+        "consumer_terminal_equipment_avms",
+        "e_reader"
+      ],
+      "required": false,
+      "description": "Required when entityKind = product."
+    },
+    {
+      "name": "operatorRole",
+      "type": "enum",
+      "enumValues": ["provider", "manufacturer", "importer", "distributor"],
+      "required": true,
+      "description": "The customer's role for this entity."
+    },
+    {
+      "name": "isMicroEnterprise",
+      "type": "boolean",
+      "required": true,
+      "description": "Fewer than 10 persons AND annual turnover or balance sheet <= EUR 2,000,000."
+    },
+    {
+      "name": "hasWebsite",
+      "type": "boolean",
+      "required": true,
+      "description": "Is a website in scope for this entity?"
+    },
+    {
+      "name": "hasMobileApp",
+      "type": "boolean",
+      "required": true,
+      "description": "Is a mobile app in scope for this entity?"
+    },
+    {
+      "name": "hasNonWebSoftware",
+      "type": "boolean",
+      "required": false,
+      "description": "Desktop or embedded software beyond a website."
+    },
+    {
+      "name": "providesDownloadableDocuments",
+      "type": "boolean",
+      "required": true,
+      "description": "Does the service provide downloadable documents (PDF, EPUB, ...)?"
+    },
+    {
+      "name": "usesSelfServiceTerminals",
+      "type": "boolean",
+      "required": true,
+      "description": "Does the service operate self-service terminals (ATMs, ticketing, check-in, info)?"
+    },
+    {
+      "name": "terminalsInUseBefore20250628",
+      "type": "boolean",
+      "required": false,
+      "description": "Are any in-scope terminals lawfully in use before 28 June 2025?"
+    },
+    {
+      "name": "usesProductsPlacedBefore20250628",
+      "type": "boolean",
+      "required": false,
+      "description": "Does the service rely on products lawfully used before 28 June 2025 (transition to 28 June 2030)?"
+    },
+    {
+      "name": "providesTwoWayVoice",
+      "type": "boolean",
+      "required": false,
+      "description": "Does the entity provide two-way voice communication?"
+    },
+    {
+      "name": "providesVideo",
+      "type": "boolean",
+      "required": false,
+      "description": "Does the entity provide video communication or media?"
+    },
+    {
+      "name": "providesRealTimeText",
+      "type": "boolean",
+      "required": false,
+      "description": "Does the entity provide, or need to provide, real-time text?"
+    },
+    {
+      "name": "disproportionateBurdenClaimed",
+      "type": "boolean",
+      "required": true,
+      "description": "Is a disproportionate-burden exemption being claimed for any requirement?"
+    },
+    {
+      "name": "fundamentalAlterationClaimed",
+      "type": "boolean",
+      "required": true,
+      "description": "Is a fundamental-alteration exemption being claimed for any requirement?"
+    }
+  ]
+}

@@ -1,0 +1,533 @@
+Guidance Document: Digital Batteries
+ Passport – data points by category
+
+
+
+
+  Version 2.0 - 15 August 2026
+
+
+                                       1
+EUROPEAN COMMISSION
+Directorate-General for Internal Market, Industry, Entrepreneurship and SMEs
+Directorate G — Compliance and Responsible Business Conduct
+Unit G2 — Single Market Implementation Tools
+Contact: Alexandru ION
+E-mail: Alexandru.ION@ec.europa.eu
+European Commission
+B-1049 Brussels
+
+
+
+
+                                                                               2
+This guidance document aims to assist economic operators and other relevant stakeholders in preparing the implementation of the
+data requirements for the digital Batteries Passport. It sets out the data points to be provided for electric vehicle (EV) batteries, light
+means of transport (LMT) batteries and industrial batteries with a capacity greater than 2 kWh, and identifies where information is
+mandatory, optional, applicable only in certain cases, or does not have to be filled/displayed as of February 2027. It should be read
+together with the applicable provisions of Regulation (EU) 2023/1542 and any relevant delegated or implementing acts.
+
+The document is intended to support a common understanding of the information to be made available in the Batteries Passport
+and to promote a consistent and workable approach across the batteries value chain by clarifying, to the extent possible, how the
+different data requirements may be understood in practice. In doing so, it is meant to facilitate dialogue among stakeholders,
+reduce unnecessary divergence in implementation approaches, and support a smooth and consistent rollout of the Batteries
+Passport.
+
+By presenting the relevant data points in a structured and accessible manner, it seeks to help stakeholders identify the information
+that may need to be collected, assessed and made available, and to support early alignment of internal processes, data systems
+and reporting practices. The following table is structured around five elements: (1) the data point number, (2) the data point name,
+(3) the legal source of the data point in the Batteries Regulation (BR), and (4)-(6) the applicability of the data point for EV, LMT and
+industrial batteries respectively. The applicability columns indicate whether a data point is mandatory, optional, applicable only in
+certain cases, or does not have to be filled/displayed as of February 2027. BR refers to REGULATION (EU) 2023/1542 OF THE
+EUROPEAN PARLIAMENT AND OF THE COUNCIL of 12 July 2023 concerning batteries and waste batteries, amending Directive
+2008/98/EC and Regulation (EU) 2019/1020 and repealing Directive 2006/66/EC1. For the purposes of this document, EV batteries,
+LMT batteries and industrial batteries correspond to the battery categories defined in Article 3 of the Batteries Regulation (BR).
+
+This guidance document may be further developed over time to provide additional detail and practical clarification. In particular,
+future updates may include further information on the definitions of the individual data points, as well as indications on possible
+measuring units or formats to be used when reporting those data points, with a view to supporting greater clarity, comparability and
+consistency in the information made available through the Batteries Passport. This document should not be considered as
+representative of the European Commission’s official position. The information in the text does not extend in any way the rights and
+obligations deriving from applicable legislation nor introduce any additional requirement. The expressed views are not authoritative
+
+1 EUR-Lex - 02023R1542-20250731 - EN - EUR-Lex
+
+
+
+                                                                                                                                          3
+and cannot prejudge any future actions the European Commission may take, including potential positions before the Court of
+Justice of the European Union.
+
+Manuscript completed in August 2026
+
+2nd Edition
+
+This document has been prepared for the European Commission however it reflects the views only of the authors, and the European
+Commission is not liable for any consequence stemming from the reuse of this publication.
+
+© European Union, 2026
+
+The Commission’s reuse policy is implemented under Commission Decision 2011/833/EU of 12 December 2011 on the reuse of Commission
+documents (OJ L 330, 14.12.2011, p. 39, ELI: http://data.europa.eu/eli/dec/2011/833/oj). Unless otherwise noted, the reuse of this document is
+authorised under the Creative Commons Attribution 4.0 International (CC BY 4.0) licence (https://creativecommons.org/licenses/by/4.0/). This
+means that reuse is allowed, provided appropriate credit is given and any changes are indicated.
+
+
+
+
+                                                                                                                                             4
+                                       Data point                                       Light means of transport
+Number   Data point name                               Electric vehicles (EV)                                                    Industrial
+                                       source                                           (LMT)
+         Unique identifier             BR Article 77              Mandatory                          Mandatory                            Mandatory
+  1                                    (3)
+
+         Identity of who is            BR Article 77              Mandatory                          Mandatory                            Mandatory
+         registering and/or is         (3)
+  2
+         responsible for the battery
+         passport
+
+         Manufacturer name,            BR Annex VI A              Mandatory                          Mandatory                            Mandatory
+  3      registered trade name or      (1)
+         registered trademark
+
+         Manufacturer postal           BR Annex VI A              Mandatory                          Mandatory                            Mandatory
+  4      address, indicating a         (1)
+         single contact point
+
+         If available, manufacturer    BR Annex VI A   optional, to be filled if such   optional, to be filled if such data is   optional, to be filled if such
+  5      web and email address         (1)             data is available                available                                data is available
+
+         Battery category              BR Annex VI A              Mandatory                          Mandatory                            Mandatory
+   6
+                                       (2)
+
+         Model identification and      BR Annex VI A              Mandatory                          Mandatory                            Mandatory
+         batch or serial number, or    (2)
+   7     product number or
+         another element allowing
+         their identification
+
+         The place of manufacturer     BR Annex VI A              Mandatory                          Mandatory                            Mandatory
+         (geographical location of     (3)
+   8
+         a battery manufacturing
+         plant)
+
+         The date of manufacturing     BR Annex VI A              Mandatory                          Mandatory                            Mandatory
+   9
+         (month and year)              (4)
+
+
+
+                                                                                                                                                                  5
+                                         Data point                                         Light means of transport
+Number   Data point name                                 Electric vehicles (EV)                                                   Industrial
+                                         source                                             (LMT)
+         The weight                      BR Annex VI A             Mandatory                            Mandatory                         Mandatory
+  10
+                                         (5)
+
+         The capacity                    BR Annex VI A             Mandatory                            Mandatory                         Mandatory
+  11
+                                         (6)
+
+         The chemistry                   BR Annex VI A             Mandatory                            Mandatory                         Mandatory
+  12
+                                         (7)
+
+         The hazardous                   BR Annex VI A             Mandatory                            Mandatory                         Mandatory
+         substances present in the       (8)
+  13
+         battery, other than
+         mercury, cadmium or lead
+
+         Usable extinguishing            BR Annex VI A             Mandatory                            Mandatory                         Mandatory
+  14
+         agent                           (9)
+
+         Critical raw materials          BR Annex VI A             Mandatory                            Mandatory                         Mandatory
+         present in the battery in a     (10)
+  15     concentration of more
+         than 0,1 % weight by
+         weight
+
+         The material composition        BR Annex XIII   Not to be filled/displayed -       Not to be filled/displayed -        Not to be filled/displayed -
+         of the battery, including its   1 (b)           repetition, same data already      repetition, same data already       repetition, same data
+         chemistry, hazardous                            required under previous data       required under previous data points already required under
+         substances present in the                       points                                                                 previous data points
+  16     battery, other than
+         mercury, cadmium or
+         lead, and critical raw
+         materials present in the
+         battery
+
+         The carbon footprint            BR Annex XIII   Not to be filled/displayed as of   Not to be filled/displayed as of     Not to be filled/displayed as
+  17     declaration                     1 (c)           February 2027- format still to     February 2027- format still to be    of February 2027- format
+                                                         be specified in the upcoming       specified in the upcoming            still to be specified in the
+
+
+                                                                                                                                                               6
+                                         Data point                                         Light means of transport
+Number   Data point name                                 Electric vehicles (EV)                                                    Industrial
+                                         source                                             (LMT)
+                                                         implementing act                   implementing act                       upcoming implementing act
+
+         The carbon footprint label      BR Annex XIII   Not to be filled/displayed as of   Not to be filled/displayed as of       Not to be filled/displayed as
+                                         1 (c)           February 2027- format still to     February 2027- format still to be      of February 2027- format
+  18
+                                                         be specified in the upcoming       specified in the upcoming              still to be specified in the
+                                                         implementing act                   implementing act                       upcoming implementing act
+
+         Information on                  BR Annex XIII   Not to be filled/displayed as of   Not to be filled/displayed as of       Not to be filled/displayed as
+         responsible sourcing as         1 (d)           February 2027- as provided in      February 2027- as provided in          of February 2027- as
+         indicated in the report on                      Article 48(1), required from       Article 48(1), required from August    provided in Article 48(1),
+  19
+         battery due diligence                           August 2027                        2027                                   required from August 2027
+         policy referred to in Article
+         52(3)
+
+         Percentage share of             BR Annex XIII   Not to be filled/displayed as of   Not to be filled/displayed as of       Not to be filled/displayed as
+         cobalt that is present in       1 (e)           February 2027- to be applied in    February 2027- to be applied in line   of February 2027- to be
+         active materials and that                       line with Article 8 and the        with Article 8 and the relevant        applied in line with Article 8
+  20     has been recovered from                         relevant delegated act             delegated act                          and the relevant delegated
+         battery manufacturing                                                                                                     act
+         waste or post-consumer
+         waste
+
+         Percentage share of             BR Annex XIII   Not to be filled/displayed as of   Not to be filled/displayed as of       Not to be filled/displayed as
+         lithium that is present in      1 (e)           February 2027- to be applied in    February 2027- to be applied in line   of February 2027- to be
+         active materials and that                       line with Article 8 and the        with Article 8 and the relevant        applied in line with Article 8
+  21     has been recovered from                         relevant delegated act             delegated act                          and the relevant delegated
+         battery manufacturing                                                                                                     act
+         waste or post-consumer
+         waste
+
+         Percentage share of             BR Annex XIII   Not to be filled/displayed as of   Not to be filled/displayed as of       Not to be filled/displayed as
+         nickel that is present in       1 (e)           February 2027- to be applied in    February 2027- to be applied in line   of February 2027- to be
+  22     active materials and that                       line with Article 8 and the        with Article 8 and the relevant        applied in line with Article 8
+         has been recovered from                         relevant delegated act             delegated act                          and the relevant delegated
+         battery manufacturing                                                                                                     act
+
+
+                                                                                                                                                                7
+                                       Data point                                         Light means of transport
+Number   Data point name                               Electric vehicles (EV)                                                    Industrial
+                                       source                                             (LMT)
+         waste or post-consumer
+         waste
+
+         The percentage share of       BR Annex XIII   Not to be filled/displayed as of   Not to be filled/displayed as of       Not to be filled/displayed as
+         lead that is present in the   1 (e)           February 2027- to be applied in    February 2027- to be applied in line   of February 2027- to be
+  23     battery and that has been                     line with Article 8 and the        with Article 8 and the relevant        applied in line with Article 8
+         recovered from waste                          relevant delegated act             delegated act                          and the relevant delegated
+                                                                                                                                 act
+
+         The share of renewable        BR Annex XIII             Mandatory                            Mandatory                           Mandatory
+  24
+         content                       1 (f)
+
+         Rated capacity (in Ah)        BR Annex XIII   Not to be filled/displayed -       Not to be filled/displayed -           Not to be filled/displayed -
+  25                                   1 (g)           repetition, same data required     repetition, same data required         repetition, same data
+                                                       under data point 11                under data point 11                    required under data point 11
+
+         Minimal voltage, with         BR Annex XIII             Mandatory                            Mandatory                           Mandatory
+  26     temperature range when        1 (h)
+         relevant
+
+         Nominal voltage, with         BR Annex XIII             Mandatory                            Mandatory                           Mandatory
+  27     temperature range when        1 (h)
+         relevant
+
+         Maximum voltage, with         BR Annex XIII             Mandatory                            Mandatory                           Mandatory
+  28     temperature range when        1 (h)
+         relevant
+
+         Original power capability     BR Annex XIII             Mandatory                            Mandatory                           Mandatory
+  29
+         (in Watts)                    1 (i)
+
+         Power limits, with            BR Annex XIII             Mandatory                            Mandatory                           Mandatory
+  30     temperature range when        1 (i)
+         relevant
+
+  31     Expected battery lifetime     BR Annex XIII             Mandatory                            Mandatory                  only applicable for some
+
+
+
+                                                                                                                                                              8
+                                      Data point                                     Light means of transport
+Number   Data point name                              Electric vehicles (EV)                                        Industrial
+                                      source                                         (LMT)
+         expressed in cycles          1 (j)                                                                         industrial batteries where
+                                                                                                                    lifetime can be expressed in
+                                                                                                                    cycles
+
+         Reference test used for      BR Annex XIII             Mandatory                        Mandatory          only applicable for some
+         expected battery lifetime    1 (j)                                                                         industrial batteries where
+  32
+         expressed in cycles                                                                                        lifetime can be expressed in
+                                                                                                                    cycles
+
+         Capacity threshold for       BR Annex XIII             Mandatory            Not to be filled/displayed     Not to be filled/displayed
+  33
+         exhaustion                   1 (k)
+
+         Temperature range the        BR Annex XIII             Mandatory                        Mandatory                   Mandatory
+         battery can withstand        1 (l)
+  34
+         when not in use
+         (reference test)
+
+         Period for which the         BR Annex XIII   if applicable (if commercial   if applicable (if commercial   if applicable (if commercial
+  35     commercial warranty for      1 (m)           warranty envisaged)            warranty envisaged)            warranty envisaged)
+         the calendar life applies
+
+         Initial round trip energy    BR Annex XIII             Mandatory                        Mandatory          only applicable for some
+  36
+         efficiency                   1 (n)                                                                         industrial batteries
+
+         Round trip energy            BR Annex XIII             Mandatory                        Mandatory          only applicable for some
+  37     efficiency at 50 % of        1 (n)                                                                         industrial batteries
+         cycle-life
+
+         Internal battery cell and    BR Annex XIII             Mandatory                        Mandatory                   Mandatory
+  38
+         pack resistance              1 (o)
+
+         C-rate of relevant cycle-    BR Annex XIII             Mandatory                        Mandatory          only applicable for some
+  39
+         life test                    1 (p)                                                                         industrial batteries
+
+         The marking requirements     BR Annex XIII             Mandatory                        Mandatory                   Mandatory
+  40
+         laid down in Article 13(4)   1 (q)
+
+
+
+                                                                                                                                                   9
+                                        Data point                                         Light means of transport
+Number   Data point name                                Electric vehicles (EV)                                                Industrial
+                                        source                                             (LMT)
+         The marking requirements       BR Annex XIII   cadmium or lead symbol if          cadmium or lead symbol if          cadmium or lead symbol if
+  41
+         laid down in Article 13(5)     1 (q)           applicable                         applicable                         applicable
+
+         The EU declaration of          BR Annex XIII             Mandatory                            Mandatory                       Mandatory
+  42     conformity referred to in      1 (r)
+         Article 18
+
+         The information regarding      BR Annex XIII             Mandatory                            Mandatory                       Mandatory
+         the prevention and             1 (s)
+         management of waste
+  43
+         batteries laid down in
+         Article 74(1), points (a) to
+         (f).
+
+         Clear, understandable          BR Annex XIII   Not to be filled/displayed as of   Not to be filled/displayed as of   Not to be filled/displayed as
+         and readable instructions      1 (t)           February 2027 - application        February 2027 - application        of February 2027 -
+         for use in a format that                       provisions on hold pending         provisions on hold pending         application provisions on
+         makes it possible to print,                    Omnibus adoption                   Omnibus adoption                   hold pending Omnibus
+         download and save them                                                                                               adoption
+  44
+         on an electronic device so
+         that the user can access
+         them at all times, in
+         particular during a
+         breakdown of the battery
+
+         Detailed composition,          BR Annex XIII             Mandatory                            Mandatory                       Mandatory
+         including materials used       2 (a)
+  45
+         in the cathode, anode and
+         electrolyte
+
+         Part numbers for               BR Annex XIII             Mandatory                            Mandatory                       Mandatory
+  46
+         components                     2 (b)
+
+         Contact details of sources     BR Annex XIII             Mandatory                            Mandatory                       Mandatory
+  47
+         for replacement spares         2 (b)
+
+
+
+                                                                                                                                                         10
+                                          Data point                                           Light means of transport
+Number      Data point name                                 Electric vehicles (EV)                                                    Industrial
+                                          source                                               (LMT)
+            Dismantling information,      BR Annex XIII                Mandatory                           Mandatory                           Mandatory
+            including at least: -         2 (c)
+            exploded diagrams of the
+            battery system/pack
+            showing the location of
+            battery cells, -
+            disassembly sequences, -
+   48       type and number of
+            fastening techniques to
+            be unlocked, - tools
+            required for disassembly,
+            - warnings if risk of
+            damaging parts exist, -
+            amount of cells used and
+            layout
+
+            Safety measures               BR Annex XIII                Mandatory                           Mandatory                           Mandatory
+   49
+                                          2 (d)
+
+            Results of test reports       BR Annex XIII                Mandatory                           Mandatory                           Mandatory
+            proving compliance with       3
+            the requirements laid
+            down in this Regulation or
+   50
+            any delegated or
+            implementing act adopted
+            pursuant to this
+            Regulation
+
+            Rated capacity (in Ah)        BR Annex XIII     same as data point 11              same as data point 11 (capacity).      if applicable, but now
+   51
+                                          4 (a)             (capacity). but now dynamic        but now dynamic                        dynamic
+
+   52       Capacity fade (in %)          BR Annex XIII                Mandatory                           Mandatory                  if applicable2
+
+2 ‘if applicable’ - to take into account the applicable provisions of Regulation 2023/1542 and relevant implementing legislation and to consider if the technical
+
+parameter in question is relevant for the battery
+
+                                                                                                                                                                    11
+                                      Data point                               Light means of transport
+Number   Data point name                              Electric vehicles (EV)                               Industrial
+                                      source                                   (LMT)
+                                      4 (a)
+
+         Power (in W)                 BR Annex XIII             Mandatory                      Mandatory   if applicable
+  53
+                                      4 (a)
+
+         Power fade (in %)            BR Annex XIII             Mandatory                      Mandatory   if applicable
+  54
+                                      4 (a)
+
+         Internal resistance (in Ω)   BR Annex XIII             Mandatory                      Mandatory   if applicable
+  55
+                                      4 (a)
+
+         Internal resistance          BR Annex XIII             Mandatory                      Mandatory   if applicable
+  56
+         increase (in %)              4 (a)
+
+         Where applicable, energy     BR Annex XIII   if applicable            if applicable               if applicable
+  57     round trip efficiency (in    4 (a)
+         %)
+
+         Where applicable, energy     BR Annex XIII   if applicable            if applicable               if applicable
+  58     round trip efficiency fade   4 (a)
+         (in %)
+
+         The expected life-time of    BR Annex XIII             Mandatory                      Mandatory   if applicable
+         the battery under the        4 (a)
+         reference conditions for
+  59     which it has been
+         designed, in terms of
+         cycles, except for non-
+         cycle applications
+
+         The expected life-time of    BR Annex XIII             Mandatory                      Mandatory   if applicable
+         the battery under the        4 (a)
+         reference conditions for
+  60
+         which it has been
+         designed, in terms of
+         calendar years
+
+
+                                                                                                                           12
+                                       Data point                                   Light means of transport
+Number   Data point name                               Electric vehicles (EV)                                    Industrial
+                                       source                                       (LMT)
+         Information on the state of   BR Annex XIII             Mandatory          Not to be filled/displayed   Not to be filled/displayed
+         health of the battery         4 (b)
+  61     pursuant to Article 14:
+         state of certified energy
+         (SOCE)
+
+         Information on the state of   BR Annex XIII   Not to be filled/displayed               Mandatory        if applicable
+         health of the battery         4 (b)
+  62
+         pursuant to Article 14:
+         remaining capacity
+
+         Information on the state of   BR Annex XIII   Not to be filled/displayed               Mandatory        if applicable
+         health of the battery         4 (b)
+         pursuant to Article 14:
+  63
+         where possible, the
+         remaining power
+         capability
+
+         Information on the state of   BR Annex XIII   Not to be filled/displayed               Mandatory        if applicable
+         health of the battery         4 (b)
+         pursuant to Article 14:
+  64
+         where possible, the
+         remaining round trip
+         efficiency
+
+         Information on the state of   BR Annex XIII   Not to be filled/displayed               Mandatory        if applicable
+         health of the battery         4 (b)
+         pursuant to Article 14:
+  65
+         [where possible,] the
+         evolution of self-
+         discharging rates
+
+         Information on the state of   BR Annex XIII   Not to be filled/displayed               Mandatory        if applicable
+  66     health of the battery         4 (b)
+         pursuant to Article 14:
+
+
+                                                                                                                                              13
+                                       Data point                               Light means of transport
+Number   Data point name                               Electric vehicles (EV)                               Industrial
+                                       source                                   (LMT)
+         where possible, the ohmic
+         resistance
+
+         Information on the status     BR Annex XIII             Mandatory                      Mandatory            Mandatory
+         of the battery, defined as    4 (c)
+         ‘original’, ‘repurposed’,
+  67
+         ‘re-used’,
+         ‘remanufactured’ or
+         ‘waste’;
+
+         The number of charging        BR Annex XIII   if applicable            if applicable               if applicable
+  68
+         and discharging cycles        4 (d)
+
+         Negative events, such as      BR Annex XIII   if applicable            if applicable               if applicable
+  69
+         accidents                     4 (d)
+
+         Periodically recorded         BR Annex XIII   if applicable            if applicable               if applicable
+         information on the            4 (d)
+  70     operating environmental
+         conditions, including
+         temperature
+
+         Periodically recorded         BR Annex XIII   if applicable            if applicable               if applicable
+  71     information on the state of   4 (d)
+         charge
+
+
+
+
+                                                                                                                                 14
+                                                                                                                         15
+
+Electronically signed on 16/08/2026 12:30 (UTC+02) in accordance with Article 11 of Commission Decision (EU) 2021/2121
+

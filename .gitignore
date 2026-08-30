@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.tsbuildinfo
+
+# env
+.env
+.env.*
+!.env.example
+
+# infra
+cdk.out/
+infra/localstack/volume/
+
+# editor / OS
+.DS_Store
+.idea/
+*.log
+npm-debug.log*
+pnpm-debug.log*

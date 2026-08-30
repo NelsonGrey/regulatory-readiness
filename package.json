@@ -1,0 +1,39 @@
+{
+  "name": "regulatory-readiness",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Regulatory Readiness Engine — one vertical-neutral engine plus data-defined control packs",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "tsc -b && pnpm -r --filter \"./apps/*\" typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "dev:api": "pnpm --filter @rre/api dev",
+    "dev:worker": "pnpm --filter @rre/worker dev",
+    "dev:web": "pnpm --filter @rre/web dev",
+    "db:migrate": "pnpm --filter @rre/api migrate",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "clean": "pnpm -r exec rm -rf dist .tsbuildinfo *.tsbuildinfo && rm -rf .tsbuildinfo"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
+    "vitest": "^2.1.8"
+  }
+}

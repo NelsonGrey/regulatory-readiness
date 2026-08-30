@@ -1,0 +1,138 @@
+{
+  "packKey": "eaa-accessibility",
+  "controlCount": 20,
+  "applicability": [
+    {
+      "name": "Large bank: website + mobile app, not a micro-enterprise",
+      "snapshotKey": "EAA-IE-EN549-V3.2.1-DRAFT",
+      "facts": {
+        "offeredToConsumersInIE": true,
+        "entityKind": "service",
+        "serviceType": "consumer_banking",
+        "operatorRole": "provider",
+        "isMicroEnterprise": false,
+        "hasWebsite": true,
+        "hasMobileApp": true,
+        "hasNonWebSoftware": false,
+        "providesDownloadableDocuments": false,
+        "usesSelfServiceTerminals": false,
+        "disproportionateBurdenClaimed": false,
+        "fundamentalAlterationClaimed": false
+      },
+      "expect": [
+        { "control": "EAA-EN549-9-1-1-1", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "EAA-EN549-9-4-1-2", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "EAA-EN549-10-1-1-1", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" },
+        { "control": "EAA-EN549-11-1-1-1", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "EAA-EN549-8-3-2", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" },
+        { "control": "EAA-EN549-9-2-4-11", "result": "OPTIONAL_IF_AVAILABLE" },
+        { "control": "EAA-SVC-ACCESSIBILITY-STATEMENT", "result": "REQUIRED_BY_SNAPSHOT" },
+        {
+          "control": "EAA-PROC-DISPROPORTIONATE-BURDEN",
+          "result": "NOT_APPLICABLE_TO_CLASSIFICATION"
+        }
+      ]
+    },
+    {
+      "name": "Micro-enterprise e-commerce service",
+      "snapshotKey": "EAA-IE-EN549-V3.2.1-DRAFT",
+      "facts": {
+        "offeredToConsumersInIE": true,
+        "entityKind": "service",
+        "serviceType": "ecommerce",
+        "operatorRole": "provider",
+        "isMicroEnterprise": true,
+        "hasWebsite": true,
+        "hasMobileApp": false,
+        "hasNonWebSoftware": false,
+        "providesDownloadableDocuments": false,
+        "usesSelfServiceTerminals": false,
+        "disproportionateBurdenClaimed": false,
+        "fundamentalAlterationClaimed": false
+      },
+      "expect": [
+        { "control": "EAA-EN549-9-1-1-1", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" },
+        {
+          "control": "EAA-SVC-ACCESSIBILITY-STATEMENT",
+          "result": "NOT_APPLICABLE_TO_CLASSIFICATION"
+        },
+        { "control": "EAA-A1-USAGE-WITHOUT-VISION", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" }
+      ]
+    },
+    {
+      "name": "Service not offered in Ireland",
+      "snapshotKey": "EAA-IE-EN549-V3.2.1-DRAFT",
+      "facts": {
+        "offeredToConsumersInIE": false,
+        "entityKind": "service",
+        "serviceType": "ecommerce",
+        "operatorRole": "provider",
+        "isMicroEnterprise": false,
+        "hasWebsite": true,
+        "hasMobileApp": false,
+        "providesDownloadableDocuments": false,
+        "usesSelfServiceTerminals": false,
+        "disproportionateBurdenClaimed": false,
+        "fundamentalAlterationClaimed": false
+      },
+      "expect": [
+        { "control": "EAA-EN549-9-1-1-1", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" },
+        {
+          "control": "EAA-SVC-ACCESSIBILITY-STATEMENT",
+          "result": "NOT_APPLICABLE_TO_CLASSIFICATION"
+        }
+      ]
+    },
+    {
+      "name": "Ticketing self-service terminal manufacturer",
+      "snapshotKey": "EAA-IE-EN549-V3.2.1-DRAFT",
+      "facts": {
+        "offeredToConsumersInIE": true,
+        "entityKind": "product",
+        "productType": "self_service_terminal_ticketing",
+        "operatorRole": "manufacturer",
+        "isMicroEnterprise": false,
+        "hasWebsite": false,
+        "hasMobileApp": false,
+        "hasNonWebSoftware": false,
+        "providesDownloadableDocuments": false,
+        "usesSelfServiceTerminals": true,
+        "disproportionateBurdenClaimed": false,
+        "fundamentalAlterationClaimed": false
+      },
+      "expect": [
+        { "control": "EAA-EN549-8-3-2", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "EAA-EN549-5-1-3-1", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "EAA-EN549-9-1-1-1", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" },
+        {
+          "control": "EAA-SVC-ACCESSIBILITY-STATEMENT",
+          "result": "NOT_APPLICABLE_TO_CLASSIFICATION"
+        }
+      ]
+    },
+    {
+      "name": "Rail operator website, disproportionate burden claimed",
+      "snapshotKey": "EAA-IE-EN549-V3.2.1-DRAFT",
+      "facts": {
+        "offeredToConsumersInIE": true,
+        "entityKind": "service",
+        "serviceType": "passenger_transport_rail",
+        "operatorRole": "provider",
+        "isMicroEnterprise": false,
+        "hasWebsite": true,
+        "hasMobileApp": false,
+        "hasNonWebSoftware": false,
+        "providesDownloadableDocuments": true,
+        "usesSelfServiceTerminals": true,
+        "disproportionateBurdenClaimed": true,
+        "fundamentalAlterationClaimed": false
+      },
+      "expect": [
+        { "control": "EAA-EN549-9-1-1-1", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "EAA-EN549-10-1-1-1", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "EAA-EN549-8-3-2", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "EAA-PROC-DISPROPORTIONATE-BURDEN", "result": "REQUIRED_BY_SNAPSHOT" }
+      ]
+    }
+  ]
+}

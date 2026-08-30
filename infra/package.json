@@ -1,0 +1,10 @@
+{
+  "name": "@rre/infra",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AWS CDK infrastructure (stub)",
+  "scripts": {
+    "build": "echo \"infra: no CDK app yet\" && exit 0"
+  }
+}

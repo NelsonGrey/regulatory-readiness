@@ -1,0 +1,29 @@
+{
+  "name": "@rre/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsup src/index.ts --format esm --target node22 --clean --sourcemap",
+    "migrate": "tsx src/db/migrate-cli.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@rre/authorization": "workspace:*",
+    "@rre/contracts": "workspace:*",
+    "@rre/control-catalog": "workspace:*",
+    "@rre/domain": "workspace:*",
+    "@rre/observability": "workspace:*",
+    "fastify": "^5.2.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2"
+  }
+}

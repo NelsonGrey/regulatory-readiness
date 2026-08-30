@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/observability" },
+    { "path": "packages/contracts" },
+    { "path": "packages/domain" },
+    { "path": "packages/control-catalog" },
+    { "path": "packages/authorization" },
+    { "path": "packages/ui" },
+    { "path": "packages/test-fixtures" }
+  ]
+}

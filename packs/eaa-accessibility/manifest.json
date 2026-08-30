@@ -1,0 +1,29 @@
+{
+  "packKey": "eaa-accessibility",
+  "title": "EU Accessibility Act (Directive 2019/882) — Ireland",
+  "sourceAuthority": "European Union / European Commission; ETSI-CEN-CENELEC (EN 301 549)",
+  "jurisdiction": "IE",
+  "sourceUrls": [
+    "https://eur-lex.europa.eu/eli/dir/2019/882/oj",
+    "https://www.irishstatutebook.ie/eli/2023/si/636/made/en",
+    "https://www.etsi.org/deliver/etsi_en/301500_301599/301549/03.02.01_60/en_301549v030201p.pdf",
+    "https://www.w3.org/TR/WCAG21/",
+    "https://www.w3.org/TR/WCAG22/"
+  ],
+  "publicationDate": "2019-04-17",
+  "retrievedDate": "TBD",
+  "sourceChecksum": "sha256:UNVERIFIED",
+  "catalogVersion": "0.1.0",
+  "snapshotKey": "EAA-IE-EN549-V3.2.1-DRAFT",
+  "effectiveDates": [
+    { "label": "EAA application date", "date": "2025-06-28" },
+    {
+      "label": "Service transition — products in use before application date",
+      "date": "2030-06-28"
+    }
+  ],
+  "supersedes": null,
+  "supersededBy": null,
+  "status": "draft",
+  "review": { "reviewers": [], "reviewedAt": null, "sourceSetHash": null }
+}

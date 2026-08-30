@@ -1,0 +1,187 @@
+{
+  "packKey": "eaa-accessibility",
+  "controls": [
+    {
+      "key": "EAA-EN549-9-1-1-1",
+      "title": "Web: non-text content has a text alternative",
+      "family": "web",
+      "fieldFamily": "web-sc-check",
+      "standardClause": "9.1.1.1",
+      "wcagSc": "1.1.1 (A)",
+      "evidenceExpectation": "Manual audit record (tester, method, pages/components, date, result) supported by automated scan output."
+    },
+    {
+      "key": "EAA-EN549-9-1-3-1",
+      "title": "Web: information, structure and relationships are programmatically determinable",
+      "family": "web",
+      "fieldFamily": "web-sc-check",
+      "standardClause": "9.1.3.1",
+      "wcagSc": "1.3.1 (A)",
+      "evidenceExpectation": "Manual audit against representative templates plus assistive-technology check."
+    },
+    {
+      "key": "EAA-EN549-9-1-4-3",
+      "title": "Web: text contrast is at least 4.5:1 (3:1 for large text)",
+      "family": "web",
+      "fieldFamily": "web-sc-check",
+      "standardClause": "9.1.4.3",
+      "wcagSc": "1.4.3 (AA)",
+      "evidenceExpectation": "Contrast measurements for the site palette plus automated scan output."
+    },
+    {
+      "key": "EAA-EN549-9-2-1-1",
+      "title": "Web: all functionality is operable by keyboard",
+      "family": "web",
+      "fieldFamily": "web-sc-check",
+      "standardClause": "9.2.1.1",
+      "wcagSc": "2.1.1 (A)",
+      "evidenceExpectation": "Keyboard-only walkthrough notes for each key flow, with tester and date."
+    },
+    {
+      "key": "EAA-EN549-9-2-4-7",
+      "title": "Web: keyboard focus indicator is visible",
+      "family": "web",
+      "fieldFamily": "web-sc-check",
+      "standardClause": "9.2.4.7",
+      "wcagSc": "2.4.7 (AA)",
+      "evidenceExpectation": "Screenshots/notes of the focus indicator across components."
+    },
+    {
+      "key": "EAA-EN549-9-3-3-2",
+      "title": "Web: labels or instructions are provided for user input",
+      "family": "web",
+      "fieldFamily": "web-sc-check",
+      "standardClause": "9.3.3.2",
+      "wcagSc": "3.3.2 (A)",
+      "evidenceExpectation": "Form review record covering every input in scope."
+    },
+    {
+      "key": "EAA-EN549-9-4-1-2",
+      "title": "Web: name, role and value are exposed to assistive technology",
+      "family": "web",
+      "fieldFamily": "web-sc-check",
+      "standardClause": "9.4.1.2",
+      "wcagSc": "4.1.2 (A)",
+      "evidenceExpectation": "Screen-reader test notes for interactive components."
+    },
+    {
+      "key": "EAA-EN549-9-2-4-11",
+      "title": "Web: focus is not entirely hidden by author content",
+      "family": "web",
+      "fieldFamily": "web-sc-check",
+      "standardClause": "9.2.4.11",
+      "wcagSc": "2.4.11 (AA)",
+      "wcagVersionMin": "2.2",
+      "evidenceExpectation": "Keyboard walkthrough confirming the focused element is at least partially visible."
+    },
+    {
+      "key": "EAA-EN549-9-2-5-8",
+      "title": "Web: interactive targets are at least 24 by 24 CSS pixels (with exceptions)",
+      "family": "web",
+      "fieldFamily": "web-sc-check",
+      "standardClause": "9.2.5.8",
+      "wcagSc": "2.5.8 (AA)",
+      "wcagVersionMin": "2.2",
+      "evidenceExpectation": "Measurement record for interactive targets, noting spacing/inline exceptions."
+    },
+    {
+      "key": "EAA-EN549-10-1-1-1",
+      "title": "Downloadable documents: non-text content has a text alternative",
+      "family": "non-web-documents",
+      "fieldFamily": "doc-sc-check",
+      "standardClause": "10.1.1.1",
+      "wcagSc": "1.1.1 (doc)",
+      "evidenceExpectation": "Per-document conformance check output (e.g. PAC, Ace) plus manual review."
+    },
+    {
+      "key": "EAA-EN549-11-1-1-1",
+      "title": "Mobile app: non-text content has a text alternative",
+      "family": "non-web-software",
+      "fieldFamily": "sw-sc-check",
+      "standardClause": "11.1.1.1",
+      "wcagSc": "1.1.1 (sw)",
+      "evidenceExpectation": "Platform accessibility-inspector output plus screen-reader test notes with build version."
+    },
+    {
+      "key": "EAA-EN549-11-5-2-3",
+      "title": "Mobile app: exposes the accessibility services of the platform",
+      "family": "non-web-software",
+      "fieldFamily": "sw-sc-check",
+      "standardClause": "11.5.2.3",
+      "wcagSc": null,
+      "evidenceExpectation": "TalkBack / VoiceOver test notes confirming platform accessibility APIs are used."
+    },
+    {
+      "key": "EAA-EN549-5-1-3-1",
+      "title": "Closed-functionality terminal: operable without vision",
+      "family": "generic-ict",
+      "fieldFamily": "hardware-check",
+      "standardClause": "5.1.3.1",
+      "wcagSc": null,
+      "evidenceExpectation": "Test report against clause 5.1.3.1 for the model/firmware, with method and date."
+    },
+    {
+      "key": "EAA-EN549-5-1-4",
+      "title": "Terminal: privacy is preserved when using accessibility features",
+      "family": "generic-ict",
+      "fieldFamily": "hardware-check",
+      "standardClause": "5.1.4",
+      "wcagSc": null,
+      "evidenceExpectation": "Test report covering private listening / masked display for the accessibility mode."
+    },
+    {
+      "key": "EAA-EN549-8-3-2",
+      "title": "Self-service terminal: tactile and/or audio output is provided",
+      "family": "generic-ict",
+      "fieldFamily": "hardware-check",
+      "standardClause": "8.3.2",
+      "wcagSc": null,
+      "evidenceExpectation": "Test report and photographs of the tactile keypad / audio jack / speech output."
+    },
+    {
+      "key": "EAA-EN549-12-2-4",
+      "title": "Support services communicate using accessible means",
+      "family": "support-services",
+      "fieldFamily": "presence-check",
+      "standardClause": "12.2.4",
+      "wcagSc": null,
+      "evidenceExpectation": "The published support channels captured as an immutable document, showing an accessible option."
+    },
+    {
+      "key": "EAA-A1-USAGE-WITHOUT-VISION",
+      "title": "The service is usable by a person with no vision (functional-performance outcome)",
+      "family": "functional-performance",
+      "fieldFamily": "outcome-attestation",
+      "standardClause": "4.2.1",
+      "wcagSc": null,
+      "evidenceExpectation": "A named approver's attestation referencing the underlying success-criterion evidence."
+    },
+    {
+      "key": "EAA-SVC-ACCESSIBILITY-STATEMENT",
+      "title": "A publicly available explanation of how the service meets the accessibility requirements",
+      "family": "service-information",
+      "fieldFamily": "document-presence",
+      "standardClause": null,
+      "wcagSc": null,
+      "evidenceExpectation": "The published statement captured with its URL and retrieval date; must cover known limitations."
+    },
+    {
+      "key": "EAA-SVC-INFO-IN-ACCESSIBLE-FORMAT",
+      "title": "The accessibility information itself is provided in an accessible format",
+      "family": "service-information",
+      "fieldFamily": "document-presence",
+      "standardClause": null,
+      "wcagSc": null,
+      "evidenceExpectation": "Conformance check of the statement page/document itself."
+    },
+    {
+      "key": "EAA-PROC-DISPROPORTIONATE-BURDEN",
+      "title": "A completed, documented disproportionate-burden assessment where burden is claimed",
+      "family": "process",
+      "fieldFamily": "assessment-record",
+      "standardClause": null,
+      "wcagSc": null,
+      "evidenceExpectation": "The signed, dated assessment applying the Annex VI criteria, listing the requirements it covers and its review date."
+    }
+  ]
+}

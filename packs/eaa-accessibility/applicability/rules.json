@@ -1,0 +1,183 @@
+{
+  "packKey": "eaa-accessibility",
+  "defaultResult": "REQUIRED_BY_SNAPSHOT",
+  "rules": [
+    {
+      "id": "not-offered-in-ie",
+      "description": "Entity is not offered to consumers in Ireland.",
+      "when": { "fact": "offeredToConsumersInIE", "eq": false },
+      "target": "*",
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "Not offered to consumers in Ireland."
+    },
+    {
+      "id": "emergency-112-specialist",
+      "description": "112 emergency communications need specialist review.",
+      "when": {
+        "all": [
+          { "known": "serviceType" },
+          { "fact": "serviceType", "eq": "emergency_communications_112" }
+        ]
+      },
+      "target": "*",
+      "result": "NEEDS_SPECIALIST_REVIEW",
+      "reason": "Emergency communications to 112 are handled under a separate specialist workflow."
+    },
+    {
+      "id": "micro-service-exempt-web",
+      "when": {
+        "all": [
+          { "fact": "entityKind", "eq": "service" },
+          { "fact": "isMicroEnterprise", "eq": true }
+        ]
+      },
+      "target": { "family": "web" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "Micro-enterprise service exemption (EAA Art. 4(5))."
+    },
+    {
+      "id": "micro-service-exempt-documents",
+      "when": {
+        "all": [
+          { "fact": "entityKind", "eq": "service" },
+          { "fact": "isMicroEnterprise", "eq": true }
+        ]
+      },
+      "target": { "family": "non-web-documents" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "Micro-enterprise service exemption (EAA Art. 4(5))."
+    },
+    {
+      "id": "micro-service-exempt-software",
+      "when": {
+        "all": [
+          { "fact": "entityKind", "eq": "service" },
+          { "fact": "isMicroEnterprise", "eq": true }
+        ]
+      },
+      "target": { "family": "non-web-software" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "Micro-enterprise service exemption (EAA Art. 4(5))."
+    },
+    {
+      "id": "micro-service-exempt-generic-ict",
+      "when": {
+        "all": [
+          { "fact": "entityKind", "eq": "service" },
+          { "fact": "isMicroEnterprise", "eq": true }
+        ]
+      },
+      "target": { "family": "generic-ict" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "Micro-enterprise service exemption (EAA Art. 4(5))."
+    },
+    {
+      "id": "micro-service-exempt-support",
+      "when": {
+        "all": [
+          { "fact": "entityKind", "eq": "service" },
+          { "fact": "isMicroEnterprise", "eq": true }
+        ]
+      },
+      "target": { "family": "support-services" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "Micro-enterprise service exemption (EAA Art. 4(5))."
+    },
+    {
+      "id": "micro-service-exempt-functional",
+      "when": {
+        "all": [
+          { "fact": "entityKind", "eq": "service" },
+          { "fact": "isMicroEnterprise", "eq": true }
+        ]
+      },
+      "target": { "family": "functional-performance" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "Micro-enterprise service exemption (EAA Art. 4(5))."
+    },
+    {
+      "id": "micro-service-exempt-service-information",
+      "when": {
+        "all": [
+          { "fact": "entityKind", "eq": "service" },
+          { "fact": "isMicroEnterprise", "eq": true }
+        ]
+      },
+      "target": { "family": "service-information" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "Micro-enterprise service exemption (EAA Art. 4(5)). Record the micro-enterprise basis as evidence."
+    },
+    {
+      "id": "web-family-off",
+      "description": "No website in scope.",
+      "when": { "not": { "fact": "hasWebsite", "eq": true } },
+      "target": { "family": "web" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "No website is in scope for this entity."
+    },
+    {
+      "id": "documents-family-off",
+      "when": { "not": { "fact": "providesDownloadableDocuments", "eq": true } },
+      "target": { "family": "non-web-documents" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "No downloadable documents are in scope."
+    },
+    {
+      "id": "software-family-off",
+      "when": {
+        "not": {
+          "any": [
+            { "fact": "hasMobileApp", "eq": true },
+            { "fact": "hasNonWebSoftware", "eq": true }
+          ]
+        }
+      },
+      "target": { "family": "non-web-software" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "No mobile app or non-web software is in scope."
+    },
+    {
+      "id": "generic-ict-family-off",
+      "when": {
+        "not": {
+          "any": [
+            { "fact": "usesSelfServiceTerminals", "eq": true },
+            { "fact": "entityKind", "eq": "product" }
+          ]
+        }
+      },
+      "target": { "family": "generic-ict" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "No self-service terminals or hardware products are in scope."
+    },
+    {
+      "id": "service-information-not-for-products",
+      "when": { "fact": "entityKind", "eq": "product" },
+      "target": { "family": "service-information" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "Service-information requirements apply to services; products use the EU declaration of conformity."
+    },
+    {
+      "id": "disproportionate-burden-not-claimed",
+      "when": {
+        "not": {
+          "any": [
+            { "fact": "disproportionateBurdenClaimed", "eq": true },
+            { "fact": "fundamentalAlterationClaimed", "eq": true }
+          ]
+        }
+      },
+      "target": { "controls": ["EAA-PROC-DISPROPORTIONATE-BURDEN"] },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "No disproportionate-burden or fundamental-alteration claim has been made."
+    },
+    {
+      "id": "wcag22-only-optional-under-en301549-v3-2-1",
+      "description": "WCAG 2.2-only criteria are optional until an EN 301 549 version referencing WCAG 2.2 is cited.",
+      "when": { "snapshot": "EAA-IE-EN549-V3.2.1-DRAFT" },
+      "target": { "controls": ["EAA-EN549-9-2-4-11", "EAA-EN549-9-2-5-8"] },
+      "result": "OPTIONAL_IF_AVAILABLE",
+      "reason": "Success criterion is new in WCAG 2.2; not yet required by the cited EN 301 549 version."
+    }
+  ]
+}

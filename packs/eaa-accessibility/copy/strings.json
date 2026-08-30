@@ -1,0 +1,24 @@
+{
+  "packKey": "eaa-accessibility",
+  "limitationStatement": "This is a preparation and evidence record, not a certification, a conformity assessment, or a legal opinion. It does not guarantee that an enforcement authority will agree. Responsibility for compliance with the European Union (Accessibility Requirements of Products and Services) Regulations 2023 remains with the provider.",
+  "forbiddenPhrases": [
+    "EAA certified",
+    "EAA compliant",
+    "Accessibility Act certified",
+    "WCAG compliant",
+    "WCAG 2.1 certified",
+    "fully WCAG conformant",
+    "fully accessible",
+    "100% accessible",
+    "guaranteed accessible",
+    "legally compliant",
+    "meets all legal requirements",
+    "audit passed",
+    "instantly compliant",
+    "one line of code"
+  ],
+  "verdict": {
+    "ready": "Based on our preparation record, this entity meets the accessibility requirements checked under EN 301 549 V3.2.1 (WCAG 2.1 AA), as of snapshot {snapshotKey} ({date}).",
+    "notReady": "This entity partially meets or does not yet meet the accessibility requirements checked under EN 301 549 V3.2.1. Known limitations are listed below."
+  }
+}

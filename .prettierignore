@@ -1,0 +1,9 @@
+dist/
+coverage/
+cdk.out/
+pnpm-lock.yaml
+*.tsbuildinfo
+
+# Prose docs are hand-authored; not Prettier-managed.
+docs/
+*.md
