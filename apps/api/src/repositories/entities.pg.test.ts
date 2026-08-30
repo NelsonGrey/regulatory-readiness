@@ -121,6 +121,28 @@ suite('Postgres unit of work + RLS (integration)', () => {
     expect(seenByBravo).toEqual({ entities: [], audit: [] })
   })
 
+  it('queryAudit returns the tenant’s events (newest first) and nothing for another tenant', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'e3a'), makeEvaluation('t-alpha', 'e3a'))
+      await u.audit(audit('e3a'))
+    })
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'e3b'), makeEvaluation('t-alpha', 'e3b'))
+      await u.audit(audit('e3b'))
+    })
+
+    const forAlpha = await uow('t-alpha', (u) => u.queryAudit({ limit: 10 }))
+    expect(forAlpha.map((e) => e.targetId)).toEqual(['e3b', 'e3a'])
+    expect(forAlpha[0]?.seq).toMatch(/^\d+$/)
+    expect(Number(forAlpha[0]!.seq)).toBeGreaterThan(Number(forAlpha[1]!.seq))
+
+    const filtered = await uow('t-alpha', (u) => u.queryAudit({ targetId: 'e3a', limit: 10 }))
+    expect(filtered).toHaveLength(1)
+
+    const forBravo = await uow('t-bravo', (u) => u.queryAudit({ limit: 10 }))
+    expect(forBravo).toEqual([])
+  })
+
   it('forbids UPDATE and DELETE on audit_event for the application role (append-only)', async () => {
     await uow('t-alpha', async (u) => {
       await u.entities.create(makeEntity('t-alpha', 'e4'), makeEvaluation('t-alpha', 'e4'))

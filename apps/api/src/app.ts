@@ -4,9 +4,11 @@ import { createLogger, type LogLevel } from '@rre/observability'
 import { getPackRegistry, type PackRegistry } from './pack-registry.js'
 import { createInMemoryStores, inMemoryUnitOfWork, type UnitOfWork } from './db/uow.js'
 import { EntityService } from './services/entities.js'
+import { AuditService } from './services/audit.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerPackRoutes } from './routes/packs.js'
 import { registerEntityRoutes } from './routes/entities.js'
+import { registerAuditRoutes } from './routes/audit.js'
 
 /** Repo `packs/` directory, resolved from this file (works in dev, test, and the bundle). */
 const DEFAULT_PACKS_DIR = fileURLToPath(new URL('../../../packs', import.meta.url))
@@ -42,9 +44,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.register(
     async (v1) => {
       const registry = options.packRegistry ?? (await getPackRegistry(packsDir))
-      const entities = new EntityService(unitOfWork, registry)
       await registerPackRoutes(v1, { registry })
-      await registerEntityRoutes(v1, { entities })
+      await registerEntityRoutes(v1, { entities: new EntityService(unitOfWork, registry) })
+      await registerAuditRoutes(v1, { audit: new AuditService(unitOfWork) })
     },
     { prefix: '/api/v1' },
   )

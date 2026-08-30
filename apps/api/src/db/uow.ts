@@ -20,8 +20,20 @@ export interface AuditInput {
 
 export interface AuditRecord extends AuditInput {
   id: string
+  /** Monotonic cursor (string; Postgres bigint). Assigned on commit. */
+  seq: string
   tenantId: string
   metadata: Record<string, unknown>
+}
+
+/** Filters for reading the audit trail (AUD-001). Newest first; `before` is an exclusive `seq` cursor. */
+export interface AuditQuery {
+  targetType?: string
+  targetId?: string
+  action?: string
+  since?: string
+  before?: string
+  limit: number
 }
 
 export interface OutboxRecord {
@@ -43,6 +55,7 @@ export interface Uow {
   readonly entities: EntityRepository
   audit(event: AuditInput): Promise<void>
   enqueue(topic: string, payload: unknown): Promise<void>
+  queryAudit(query: AuditQuery): Promise<AuditRecord[]>
 }
 
 export type UnitOfWork = <T>(tenantId: string, fn: (uow: Uow) => Promise<T>) => Promise<T>
@@ -82,9 +95,64 @@ export function pgUnitOfWork(pool: Pool): UnitOfWork {
             [`obx_${randomUUID()}`, tenantId, topic, JSON.stringify(payload)],
           )
         },
+        async queryAudit(q) {
+          const res = await client.query<AuditRow>(
+            `SELECT id, seq::text AS seq, tenant_id, actor_type, actor_id, action,
+                    target_type, target_id, occurred_at, correlation_id, reason, metadata
+             FROM audit_event
+             WHERE ($1::text IS NULL OR target_type = $1)
+               AND ($2::text IS NULL OR target_id = $2)
+               AND ($3::text IS NULL OR action = $3)
+               AND ($4::timestamptz IS NULL OR occurred_at >= $4)
+               AND ($5::bigint IS NULL OR seq < $5::bigint)
+             ORDER BY seq DESC
+             LIMIT $6`,
+            [
+              q.targetType ?? null,
+              q.targetId ?? null,
+              q.action ?? null,
+              q.since ?? null,
+              q.before ?? null,
+              q.limit,
+            ],
+          )
+          return res.rows.map(rowToAuditRecord)
+        },
       }
       return fn(uow)
     })
+}
+
+interface AuditRow {
+  id: string
+  seq: string
+  tenant_id: string
+  actor_type: AuditInput['actorType']
+  actor_id: string
+  action: string
+  target_type: string
+  target_id: string
+  occurred_at: Date
+  correlation_id: string | null
+  reason: string | null
+  metadata: Record<string, unknown>
+}
+
+function rowToAuditRecord(r: AuditRow): AuditRecord {
+  return {
+    id: r.id,
+    seq: r.seq,
+    tenantId: r.tenant_id,
+    actorType: r.actor_type,
+    actorId: r.actor_id,
+    action: r.action,
+    targetType: r.target_type,
+    targetId: r.target_id,
+    occurredAt: r.occurred_at.toISOString(),
+    correlationId: r.correlation_id ?? undefined,
+    reason: r.reason ?? undefined,
+    metadata: r.metadata,
+  }
 }
 
 // --- In-memory ------------------------------------------------------------------
@@ -136,6 +204,7 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       async audit(ev) {
         stagedAudit.push({
           id: `aud_${randomUUID()}`,
+          seq: '', // assigned on flush
           tenantId,
           ...ev,
           metadata: ev.metadata ?? {},
@@ -152,13 +221,26 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
           attempts: 0,
         })
       },
+      async queryAudit(q) {
+        let rows = stores.audit.filter((a) => a.tenantId === tenantId)
+        if (q.targetType) rows = rows.filter((a) => a.targetType === q.targetType)
+        if (q.targetId) rows = rows.filter((a) => a.targetId === q.targetId)
+        if (q.action) rows = rows.filter((a) => a.action === q.action)
+        if (q.since) rows = rows.filter((a) => a.occurredAt >= q.since!)
+        rows = [...rows].sort((a, b) => Number(b.seq) - Number(a.seq))
+        if (q.before) rows = rows.filter((a) => Number(a.seq) < Number(q.before))
+        return rows.slice(0, q.limit)
+      },
     }
 
     const result = await fn(uow)
 
     for (const e of stagedEntities) stores.entities.set(e.id, e)
     for (const e of stagedEvaluations) stores.evaluations.set(e.id, e)
-    stores.audit.push(...stagedAudit)
+    for (const a of stagedAudit) {
+      a.seq = String(stores.audit.length + 1)
+      stores.audit.push(a)
+    }
     stores.outbox.push(...stagedOutbox)
     return result
   }
