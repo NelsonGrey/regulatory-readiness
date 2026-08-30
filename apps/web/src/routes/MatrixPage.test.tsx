@@ -1,7 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { mockApi, renderRoute } from '../test/harness.js'
+
+const row = (over: Partial<Record<string, unknown>>) => ({
+  control: 'C',
+  title: 'T',
+  family: 'web',
+  standardClause: null,
+  wcagSc: null,
+  accessClassDefault: 'PUBLIC_CANDIDATE',
+  applicability: 'REQUIRED_BY_SNAPSHOT',
+  readiness: 'MISSING',
+  approvedValue: null,
+  approvedUnit: null,
+  pendingClaims: 0,
+  ...over,
+})
 
 const matrix = {
   entity: {
@@ -28,76 +43,94 @@ const matrix = {
     needsSpecialistReview: 0,
     duplicate: 0,
   },
+  entityStatus: 'BLOCKED',
+  readinessCounts: { EVIDENCED: 1, MISSING: 2, NOT_APPLICABLE: 1 },
   rows: [
-    {
-      control: 'EAA-EN549-9-1-1-1',
+    row({
+      control: 'EAA-9-1-1-1',
       title: 'Text alternatives',
-      family: 'web',
-      standardClause: '9.1.1.1',
-      wcagSc: '1.1.1 (A)',
-      accessClassDefault: 'PUBLIC_CANDIDATE',
-      applicability: 'REQUIRED_BY_SNAPSHOT',
-    },
-    {
-      control: 'EAA-EN549-9-2-1-1',
-      title: 'Keyboard',
-      family: 'web',
-      standardClause: '9.2.1.1',
-      wcagSc: '2.1.1 (A)',
-      accessClassDefault: 'PUBLIC_CANDIDATE',
-      applicability: 'REQUIRED_BY_SNAPSHOT',
-    },
-    {
-      control: 'EAA-EN549-9-2-4-11',
-      title: 'Focus not obscured',
-      family: 'web',
-      standardClause: '9.2.4.11',
-      wcagSc: '2.4.11 (AA)',
-      accessClassDefault: 'PUBLIC_CANDIDATE',
+      readiness: 'EVIDENCED',
+      approvedValue: 'alt text present',
+      approvedUnit: null,
+    }),
+    row({ control: 'EAA-9-2-1-1', title: 'Keyboard', readiness: 'MISSING' }),
+    row({
+      control: 'EAA-9-2-4-11',
+      title: 'Focus',
       applicability: 'OPTIONAL_IF_AVAILABLE',
-    },
-    {
-      control: 'EAA-EN549-10-1-1-1',
+      readiness: 'MISSING',
+    }),
+    row({
+      control: 'EAA-10-1-1-1',
       title: 'Documents',
-      family: 'non-web-documents',
-      standardClause: '10.1.1.1',
-      wcagSc: null,
-      accessClassDefault: 'PUBLIC_CANDIDATE',
       applicability: 'NOT_APPLICABLE_TO_CLASSIFICATION',
+      readiness: 'NOT_APPLICABLE',
       reason: 'No downloadable documents are in scope.',
-    },
+    }),
   ],
 }
 
 describe('MatrixPage', () => {
-  it('renders the entity context, an honest denominator, and every control row', async () => {
+  it('shows the entity-status banner, a readiness column, and the approved value', async () => {
     mockApi([{ path: '/api/v1/entities/ent_1/matrix', body: matrix }])
     renderRoute('/w/entities/ent_1/matrix')
 
     expect(await screen.findByRole('heading', { name: 'Acme Bank Online' })).toBeInTheDocument()
-    expect(screen.getByText('EAA-IE-EN549-V3.2.1-DRAFT')).toBeInTheDocument()
-    expect(screen.getByText(/2 of 4 controls are required by this snapshot/i)).toBeInTheDocument()
-    expect(screen.getByText(/not a compliance score/i)).toBeInTheDocument()
+    expect(screen.getByText(/blocked — required evidence is missing/i)).toBeInTheDocument()
+    expect(screen.getByText(/no compliance score/i)).toBeInTheDocument()
 
     const table = screen.getByRole('table')
-    expect(within(table).getAllByRole('row')).toHaveLength(5) // header + 4
-    expect(within(table).getByText('EAA-EN549-9-2-4-11')).toBeInTheDocument()
-    expect(within(table).getByText('No downloadable documents are in scope.')).toBeInTheDocument()
+    const evidencedRow = within(table).getByText('EAA-9-1-1-1').closest('tr')!
+    expect(within(evidencedRow).getByText('Evidenced')).toBeInTheDocument()
+    expect(within(evidencedRow).getByText('alt text present')).toBeInTheDocument()
+
+    // the readiness summary is clickable and filters the table
+    const summary = screen.getByRole('list', { name: /controls by readiness/i })
+    await userEvent.setup().click(within(summary).getByRole('button', { name: /evidenced/i }))
+    expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(2) // header + 1
+    expect(within(screen.getByRole('table')).queryByText('EAA-9-2-1-1')).not.toBeInTheDocument()
   })
 
-  it('filters rows by applicability when a summary chip is clicked', async () => {
+  it('records a claim through the inline form and refetches the matrix', async () => {
     const user = userEvent.setup()
-    mockApi([{ path: '/api/v1/entities/ent_1/matrix', body: matrix }])
+    const afterClaim = {
+      ...matrix,
+      rows: matrix.rows.map((r) =>
+        r.control === 'EAA-9-2-1-1' ? { ...r, readiness: 'PENDING_REVIEW', pendingClaims: 1 } : r,
+      ),
+    }
+    let calls = 0
+    const { calls: recorded } = mockApi([
+      {
+        path: '/api/v1/entities/ent_1/matrix',
+        method: 'GET',
+        get body() {
+          return calls++ === 0 ? matrix : afterClaim
+        },
+      },
+      {
+        path: '/api/v1/entities/ent_1/controls/EAA-9-2-1-1/claims',
+        method: 'POST',
+        status: 201,
+        body: { claim: { id: 'clm_1', status: 'PENDING_REVIEW' } },
+      },
+    ])
+
     renderRoute('/w/entities/ent_1/matrix')
+    const table = await screen.findByRole('table')
+    const keyboardRow = within(table).getByText('EAA-9-2-1-1').closest('tr')!
+    await user.click(within(keyboardRow).getByRole('button', { name: /add claim/i }))
 
-    await screen.findByRole('heading', { name: 'Acme Bank Online' })
-    const summary = screen.getByRole('list', { name: /controls by applicability/i })
-    await user.click(within(summary).getByRole('button', { name: /not applicable/i }))
+    await user.type(screen.getByLabelText(/^value/i), 'keyboard operable')
+    await user.click(screen.getByRole('button', { name: /submit for review/i }))
 
-    const table = screen.getByRole('table')
-    expect(within(table).getAllByRole('row')).toHaveLength(2) // header + the one N/A row
-    expect(within(table).getByText('EAA-EN549-10-1-1-1')).toBeInTheDocument()
-    expect(within(table).queryByText('EAA-EN549-9-1-1-1')).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        recorded.some((c) => c.method === 'POST' && c.url.includes('/controls/EAA-9-2-1-1/claims')),
+      ).toBe(true)
+    })
+    // the refetched matrix shows the pending badge
+    expect(await screen.findByText(/1 pending/i)).toBeInTheDocument()
   })
 
   it('shows a not-found message for an unknown entity', async () => {

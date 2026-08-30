@@ -163,6 +163,8 @@ function matrixBody(id: string) {
       needsSpecialistReview: 0,
       duplicate: 0,
     },
+    entityStatus: 'BLOCKED',
+    readinessCounts: { MISSING: 3 },
     rows: [
       {
         control: 'C-1',
@@ -172,6 +174,10 @@ function matrixBody(id: string) {
         wcagSc: null,
         accessClassDefault: 'PUBLIC_CANDIDATE',
         applicability: 'REQUIRED_BY_SNAPSHOT',
+        readiness: 'MISSING',
+        approvedValue: null,
+        approvedUnit: null,
+        pendingClaims: 0,
       },
     ],
   }

@@ -3,6 +3,7 @@ import { Shell } from './components/Shell.js'
 import { PacksPage } from './routes/PacksPage.js'
 import { NewEntityPage } from './routes/NewEntityPage.js'
 import { MatrixPage } from './routes/MatrixPage.js'
+import { ReviewQueuePage } from './routes/ReviewQueuePage.js'
 
 export const routes: RouteObject[] = [
   {
@@ -12,6 +13,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <PacksPage /> },
       { path: 'w/entities/new', element: <NewEntityPage /> },
       { path: 'w/entities/:id/matrix', element: <MatrixPage /> },
+      { path: 'w/entities/:id/review', element: <ReviewQueuePage /> },
     ],
   },
 ]

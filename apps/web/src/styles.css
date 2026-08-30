@@ -251,3 +251,107 @@ button:disabled {
   overflow: hidden;
   clip: rect(0 0 0 0);
 }
+
+.rre-status {
+  margin: 0.75rem 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid;
+  font-size: 0.9rem;
+}
+.rre-status[data-status='BLOCKED'] {
+  background: #fdecec;
+  border-color: #e6a8a8;
+  color: #7a1f1f;
+}
+.rre-status[data-status='REVIEW_NEEDED'] {
+  background: #fdf3e3;
+  border-color: #e6c893;
+  color: #7a5300;
+}
+.rre-status[data-status='EVIDENCE_READY'] {
+  background: #eef7ee;
+  border-color: #a8d3a8;
+  color: #275e27;
+}
+.rre-status[data-status='OUTDATED_SNAPSHOT'] {
+  background: #eef2fb;
+  border-color: #9cc3ea;
+  color: #14406b;
+}
+
+.rre-readiness-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  border: 1px solid var(--border);
+  background: #f1f1f1;
+  color: var(--muted);
+}
+.rre-readiness-chip[data-state='EVIDENCED'] {
+  background: #eef7ee;
+  border-color: #a8d3a8;
+  color: #275e27;
+}
+.rre-readiness-chip[data-state='PENDING_REVIEW'] {
+  background: #fdf3e3;
+  border-color: #e6c893;
+  color: #7a5300;
+}
+.rre-readiness-chip[data-state='MISSING'],
+.rre-readiness-chip[data-state='CONFLICTING'],
+.rre-readiness-chip[data-state='STALE'] {
+  background: #fdecec;
+  border-color: #e6a8a8;
+  color: #7a1f1f;
+}
+
+.rre-badge {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.rre-panel {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  display: grid;
+  gap: 0.6rem;
+  max-width: 480px;
+}
+.rre-panel h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.rre-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+button.rre-secondary {
+  background: var(--panel);
+  color: var(--accent);
+}
+
+.rre-queue {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+.rre-queue-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.5rem;
+  background: var(--panel);
+}
+.rre-queue-head {
+  font-size: 0.85rem;
+  color: var(--muted);
+}

@@ -49,6 +49,31 @@ export interface MatrixRow {
   accessClassDefault: string
   applicability: string
   reason?: string
+  readiness: string
+  approvedValue: string | null
+  approvedUnit: string | null
+  pendingClaims: number
+}
+
+export type ReadinessCounts = Record<string, number>
+
+export type EntityStatus = 'BLOCKED' | 'REVIEW_NEEDED' | 'EVIDENCE_READY' | 'OUTDATED_SNAPSHOT'
+
+export interface ClaimSummary {
+  id: string
+  controlKey: string
+  value: string
+  unit: string | null
+  origin: string
+  status: string
+  revision: number
+  assertedBy: string
+  assertedAt: string
+}
+
+export interface ReviewQueue {
+  entityId: string
+  items: ClaimSummary[]
 }
 
 export interface ApplicabilitySummary {
@@ -78,5 +103,7 @@ export interface EntityMatrix {
     version: number
   }
   summary: ApplicabilitySummary
+  entityStatus: EntityStatus
+  readinessCounts: ReadinessCounts
   rows: MatrixRow[]
 }

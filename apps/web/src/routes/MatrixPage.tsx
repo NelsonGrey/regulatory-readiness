@@ -1,26 +1,37 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react'
-import { useParams } from 'react-router-dom'
-import { ApplicabilityChip } from '@rre/ui'
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { ApplicabilityChip, ReadinessChip } from '@rre/ui'
 import { api, ApiError } from '../api/client.js'
-import type { EntityMatrix } from '../api/types.js'
+import type { EntityMatrix, MatrixRow } from '../api/types.js'
+import { AddClaimForm } from '../components/AddClaimForm.js'
 
-const BUCKETS: Array<{ key: keyof EntityMatrix['summary']; label: string; result: string }> = [
-  { key: 'requiredNow', label: 'Required', result: 'REQUIRED_BY_SNAPSHOT' },
-  { key: 'optional', label: 'Optional', result: 'OPTIONAL_IF_AVAILABLE' },
-  { key: 'conditional', label: 'Needs a fact', result: 'CONDITIONAL_FACT_REQUIRED' },
-  { key: 'notYetRequired', label: 'Not yet required', result: 'NOT_YET_REQUIRED_BY_SNAPSHOT' },
-  { key: 'needsSpecialistReview', label: 'Specialist review', result: 'NEEDS_SPECIALIST_REVIEW' },
-  { key: 'duplicate', label: 'Duplicate', result: 'DUPLICATE_SOURCE_FIELD' },
-  { key: 'notApplicable', label: 'Not applicable', result: 'NOT_APPLICABLE_TO_CLASSIFICATION' },
-]
+const ENTITY_STATUS_LABEL: Record<string, string> = {
+  BLOCKED: 'Blocked — required evidence is missing, conflicting, or stale',
+  REVIEW_NEEDED: 'Review needed — proposals await an approver',
+  EVIDENCE_READY: 'Evidence ready for this snapshot',
+  OUTDATED_SNAPSHOT: 'A newer control snapshot is available',
+}
+
+const READINESS_ORDER = [
+  'EVIDENCED',
+  'PENDING_REVIEW',
+  'MISSING',
+  'CONFLICTING',
+  'STALE',
+  'CONDITIONAL',
+  'NOT_YET_REQUIRED',
+  'NOT_APPLICABLE',
+] as const
 
 export function MatrixPage(): ReactElement {
   const { id = '' } = useParams()
   const [matrix, setMatrix] = useState<EntityMatrix | null>(null)
   const [status, setStatus] = useState<'loading' | 'ok' | 'notfound' | 'error'>('loading')
-  const [filter, setFilter] = useState('')
+  const [readinessFilter, setReadinessFilter] = useState('')
+  const [activeControl, setActiveControl] = useState<string | null>(null)
+  const [version, setVersion] = useState(0)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let live = true
     setStatus('loading')
     api
@@ -39,9 +50,12 @@ export function MatrixPage(): ReactElement {
     }
   }, [id])
 
-  const rows = useMemo(
-    () => (matrix ? matrix.rows.filter((r) => !filter || r.applicability === filter) : []),
-    [matrix, filter],
+  useEffect(() => load(), [load, version])
+
+  const rows = useMemo<MatrixRow[]>(
+    () =>
+      matrix ? matrix.rows.filter((r) => !readinessFilter || r.readiness === readinessFilter) : [],
+    [matrix, readinessFilter],
   )
 
   if (status === 'loading') return <p>Loading the control matrix…</p>
@@ -51,6 +65,12 @@ export function MatrixPage(): ReactElement {
   return (
     <section>
       <h1>{matrix.entity.name}</h1>
+
+      <p className="rre-status" data-status={matrix.entityStatus}>
+        {ENTITY_STATUS_LABEL[matrix.entityStatus] ?? matrix.entityStatus}. This is a preparation
+        status, not certification or authority approval.
+      </p>
+
       <dl className="rre-context">
         <div>
           <dt>Pack</dt>
@@ -69,26 +89,27 @@ export function MatrixPage(): ReactElement {
           </dd>
         </div>
         <div>
-          <dt>Evaluated</dt>
-          <dd>{new Date(matrix.evaluation.evaluatedAt).toLocaleString()}</dd>
+          <dt>Review</dt>
+          <dd>
+            <Link to={`/w/entities/${id}/review`}>Review queue →</Link>
+          </dd>
         </div>
       </dl>
 
       <p className="rre-denominator">
         {matrix.summary.requiredNow} of {matrix.summary.total} controls are required by this
-        snapshot. The remaining controls are excluded with a recorded reason. This is a preparation
-        status, not a compliance score.
+        snapshot. Excluded controls carry a recorded reason. No compliance score.
       </p>
 
-      <ul className="rre-summary" aria-label="controls by applicability">
-        {BUCKETS.map((b) => (
-          <li key={b.key}>
+      <ul className="rre-summary" aria-label="controls by readiness">
+        {READINESS_ORDER.filter((s) => (matrix.readinessCounts[s] ?? 0) > 0).map((s) => (
+          <li key={s}>
             <button
               type="button"
-              className={filter === b.result ? 'is-active' : ''}
-              onClick={() => setFilter(filter === b.result ? '' : b.result)}
+              className={readinessFilter === s ? 'is-active' : ''}
+              onClick={() => setReadinessFilter(readinessFilter === s ? '' : s)}
             >
-              <ApplicabilityChip result={b.result} /> <span>{matrix.summary[b.key]}</span>
+              <ReadinessChip state={s} /> <span>{matrix.readinessCounts[s]}</span>
             </button>
           </li>
         ))}
@@ -99,9 +120,10 @@ export function MatrixPage(): ReactElement {
           <tr>
             <th>Control</th>
             <th>Title</th>
-            <th>Family</th>
             <th>Applicability</th>
-            <th>Reason</th>
+            <th>Readiness</th>
+            <th>Approved value</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -111,15 +133,47 @@ export function MatrixPage(): ReactElement {
                 <code>{r.control}</code>
               </td>
               <td>{r.title}</td>
-              <td>{r.family}</td>
               <td>
                 <ApplicabilityChip result={r.applicability} />
               </td>
-              <td>{r.reason ?? ''}</td>
+              <td>
+                <ReadinessChip state={r.readiness} reason={r.reason} />
+                {r.pendingClaims > 0 ? (
+                  <span className="rre-badge"> {r.pendingClaims} pending</span>
+                ) : null}
+              </td>
+              <td>
+                {r.approvedValue
+                  ? `${r.approvedValue}${r.approvedUnit ? ` ${r.approvedUnit}` : ''}`
+                  : '—'}
+              </td>
+              <td>
+                {r.applicability === 'NOT_APPLICABLE_TO_CLASSIFICATION' ? null : (
+                  <button
+                    type="button"
+                    className="rre-secondary"
+                    onClick={() => setActiveControl(activeControl === r.control ? null : r.control)}
+                  >
+                    {activeControl === r.control ? 'Close' : 'Add claim'}
+                  </button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {activeControl ? (
+        <AddClaimForm
+          entityId={id}
+          control={activeControl}
+          onCancel={() => setActiveControl(null)}
+          onDone={() => {
+            setActiveControl(null)
+            setVersion((v) => v + 1)
+          }}
+        />
+      ) : null}
     </section>
   )
 }

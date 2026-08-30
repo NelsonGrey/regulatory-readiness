@@ -1,8 +1,7 @@
 import type { ReactElement } from 'react'
-import type { ReadinessState } from '@rre/domain'
 
 /** User-facing label + icon glyph per readiness state (engine detailed design 01 §8). */
-const PRESENTATION: Record<ReadinessState, { label: string; glyph: string }> = {
+const PRESENTATION: Record<string, { label: string; glyph: string }> = {
   EVIDENCED: { label: 'Evidenced', glyph: '✓' },
   MISSING: { label: 'Missing', glyph: '!' },
   CONFLICTING: { label: 'Conflict', glyph: '⚠' },
@@ -14,7 +13,7 @@ const PRESENTATION: Record<ReadinessState, { label: string; glyph: string }> = {
 }
 
 export interface ReadinessChipProps {
-  state: ReadinessState
+  state: string
   /** Optional human explanation surfaced via the chip's accessible description. */
   reason?: string
 }
