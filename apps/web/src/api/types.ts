@@ -87,6 +87,93 @@ export interface ApplicabilitySummary {
   duplicate: number
 }
 
+export type RequestStatus =
+  'DRAFT' | 'SENT' | 'IN_PROGRESS' | 'SUBMITTED' | 'CLOSED' | 'CANCELLED' | 'EXPIRED'
+
+export type AvailabilityState =
+  'VALUE_SUPPLIED' | 'UNAVAILABLE' | 'UNKNOWN' | 'NOT_APPLICABLE' | 'NEEDS_CLARIFICATION'
+
+export interface EvidenceRequest {
+  id: string
+  entityId: string
+  packKey: string
+  status: RequestStatus
+  message: string | null
+  dueAt: string | null
+  createdBy: string
+  createdAt: string
+}
+
+export interface RequestItem {
+  id: string
+  requestId: string
+  controlKey: string
+  instructions: string | null
+  requiredInRequest: boolean
+}
+
+export interface CreateRequestResponse {
+  request: EvidenceRequest
+  items: RequestItem[]
+  token: string
+  tokenPrefix: string
+  expiresAt: string
+  contributorPath: string
+}
+
+export interface RequestGrantView {
+  tokenPrefix: string
+  expiresAt: string
+  revokedAt: string | null
+  uses: number
+}
+
+export interface RequestSubmissionResponse {
+  id: string
+  controlKey: string
+  value: string | null
+  unit: string | null
+  availabilityState: AvailabilityState
+}
+
+export interface RequestSubmissionView {
+  id: string
+  version: number
+  submittedAt: string
+  responses: RequestSubmissionResponse[]
+}
+
+export interface RequestDetail {
+  request: EvidenceRequest
+  items: RequestItem[]
+  grants: RequestGrantView[]
+  submissions: RequestSubmissionView[]
+}
+
+export interface ContributorItemView {
+  requestItemId: string
+  controlKey: string
+  title: string
+  instructions: string | null
+  required: boolean
+}
+
+export interface ContributorView {
+  requestingOrganization: string
+  entityName: string
+  dueAt: string | null
+  status: RequestStatus
+  items: ContributorItemView[]
+}
+
+export interface ContributorReceipt {
+  receiptId: string
+  submittedAt: string
+  itemCount: number
+  version: number
+  note: string
+}
+
 export interface EntityMatrix {
   entity: {
     id: string
