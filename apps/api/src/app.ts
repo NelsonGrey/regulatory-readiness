@@ -5,10 +5,12 @@ import { getPackRegistry, type PackRegistry } from './pack-registry.js'
 import { createInMemoryStores, inMemoryUnitOfWork, type UnitOfWork } from './db/uow.js'
 import { EntityService } from './services/entities.js'
 import { AuditService } from './services/audit.js'
+import { ClaimService } from './services/claims.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerPackRoutes } from './routes/packs.js'
 import { registerEntityRoutes } from './routes/entities.js'
 import { registerAuditRoutes } from './routes/audit.js'
+import { registerClaimRoutes } from './routes/claims.js'
 
 /** Repo `packs/` directory, resolved from this file (works in dev, test, and the bundle). */
 const DEFAULT_PACKS_DIR = fileURLToPath(new URL('../../../packs', import.meta.url))
@@ -47,6 +49,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       await registerPackRoutes(v1, { registry })
       await registerEntityRoutes(v1, { entities: new EntityService(unitOfWork, registry) })
       await registerAuditRoutes(v1, { audit: new AuditService(unitOfWork) })
+      await registerClaimRoutes(v1, { claims: new ClaimService(unitOfWork, registry) })
     },
     { prefix: '/api/v1' },
   )

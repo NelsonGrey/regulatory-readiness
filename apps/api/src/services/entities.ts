@@ -3,16 +3,20 @@ import type { CreateEntityRequest } from '@rre/contracts'
 import { evaluateApplicability, validateEntityFacts, type FactIssue } from '@rre/control-catalog'
 import {
   canonicalJson,
+  readinessForEntity,
   summariseApplicability,
   type ApplicabilitySummary,
   type EntityFacts,
   type EntityScopeEvaluation,
+  type EntityStatus,
   type EvaluationDigestInput,
+  type ReadinessCounts,
   type RegulatedEntity,
 } from '@rre/domain'
 import type { AuthContext } from '../auth.js'
 import type { PackRegistry } from '../pack-registry.js'
 import type { UnitOfWork } from '../db/uow.js'
+import { approvedClaimByControl, claimStateByControl } from './claims.js'
 
 /** `sha256:<hex>` over the canonical form of a scope evaluation (engine AC-003). */
 function computeEvaluationHash(input: EvaluationDigestInput): string {
@@ -44,12 +48,18 @@ export interface MatrixRow {
   accessClassDefault: string
   applicability: string
   reason?: string
+  readiness: string
+  approvedValue: string | null
+  approvedUnit: string | null
+  pendingClaims: number
 }
 
 export interface EntityMatrix {
   entity: RegulatedEntity
   evaluation: Pick<EntityScopeEvaluation, 'id' | 'snapshotKey' | 'evaluatedAt' | 'hash' | 'version'>
   summary: ApplicabilitySummary
+  entityStatus: EntityStatus
+  readinessCounts: ReadinessCounts
   rows: MatrixRow[]
 }
 
@@ -159,8 +169,19 @@ export class EntityService {
       const pack = this.packs.get(found.entity.packKey)
       const meta = new Map((pack?.loaded?.controls ?? []).map((c) => [c.key, c]))
 
+      const claims = await u.claims.listByEntity(id)
+      const claimState = claimStateByControl(claims)
+      const approved = approvedClaimByControl(claims)
+
+      const readiness = readinessForEntity(
+        found.evaluation.results.map((r) => ({ control: r.control, applicability: r.result })),
+        claimState,
+      )
+      const readinessByControl = new Map(readiness.perControl.map((c) => [c.control, c.readiness]))
+
       const rows: MatrixRow[] = found.evaluation.results.map((r) => {
         const c = meta.get(r.control)
+        const approvedClaim = approved.get(r.control) ?? null
         return {
           control: r.control,
           title: c?.title ?? r.control,
@@ -170,6 +191,10 @@ export class EntityService {
           accessClassDefault: c?.accessClassDefault ?? 'PUBLIC_CANDIDATE',
           applicability: r.result,
           reason: r.reason,
+          readiness: readinessByControl.get(r.control) ?? 'MISSING',
+          approvedValue: approvedClaim?.value ?? null,
+          approvedUnit: approvedClaim?.unit ?? null,
+          pendingClaims: claimState.get(r.control)?.pending ?? 0,
         }
       })
 
@@ -183,6 +208,8 @@ export class EntityService {
           version: found.evaluation.version,
         },
         summary: summariseApplicability(found.evaluation.results),
+        entityStatus: readiness.entityStatus,
+        readinessCounts: readiness.counts,
         rows,
       }
     })

@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import type { Pool } from 'pg'
-import type { EntityScopeEvaluation, RegulatedEntity } from '@rre/domain'
+import type { ClaimStatus, EntityScopeEvaluation, RegulatedEntity } from '@rre/domain'
 import { withTenant } from '@rre/db'
 import { PgEntityRepository } from '../repositories/entities.pg.js'
+import { PgClaimRepository } from '../repositories/claims.pg.js'
 import type { EntityRepository } from '../services/entities.js'
+import type { ClaimRecord, ClaimRepository, ReviewDecisionRecord } from '../services/claims.js'
 
 /** One audit event (engine TRD §20). Safe metadata only — never document text, claim values, or tokens. */
 export interface AuditInput {
@@ -53,6 +55,7 @@ export interface OutboxRecord {
 export interface Uow {
   readonly tenantId: string
   readonly entities: EntityRepository
+  readonly claims: ClaimRepository
   audit(event: AuditInput): Promise<void>
   enqueue(topic: string, payload: unknown): Promise<void>
   queryAudit(query: AuditQuery): Promise<AuditRecord[]>
@@ -68,6 +71,7 @@ export function pgUnitOfWork(pool: Pool): UnitOfWork {
       const uow: Uow = {
         tenantId,
         entities: new PgEntityRepository(client, tenantId),
+        claims: new PgClaimRepository(client, tenantId),
         async audit(ev) {
           await client.query(
             `INSERT INTO audit_event
@@ -162,10 +166,19 @@ export interface InMemoryStores {
   evaluations: Map<string, EntityScopeEvaluation>
   audit: AuditRecord[]
   outbox: OutboxRecord[]
+  claims: ClaimRecord[]
+  decisions: ReviewDecisionRecord[]
 }
 
 export function createInMemoryStores(): InMemoryStores {
-  return { entities: new Map(), evaluations: new Map(), audit: [], outbox: [] }
+  return {
+    entities: new Map(),
+    evaluations: new Map(),
+    audit: [],
+    outbox: [],
+    claims: [],
+    decisions: [],
+  }
 }
 
 /**
@@ -178,6 +191,53 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
     const stagedEvaluations: EntityScopeEvaluation[] = []
     const stagedAudit: AuditRecord[] = []
     const stagedOutbox: OutboxRecord[] = []
+    const stagedClaims: ClaimRecord[] = []
+    const stagedDecisions: ReviewDecisionRecord[] = []
+    const claimStatusOverrides = new Map<
+      string,
+      { status: ClaimStatus; supersedesClaimId?: string | null }
+    >()
+
+    const allClaims = (): ClaimRecord[] =>
+      [...stores.claims, ...stagedClaims].map((c) => {
+        const o = claimStatusOverrides.get(c.id)
+        if (!o) return c
+        return {
+          ...c,
+          status: o.status,
+          supersedesClaimId:
+            o.supersedesClaimId === undefined ? c.supersedesClaimId : o.supersedesClaimId,
+        }
+      })
+
+    const claims: ClaimRepository = {
+      async insert(c) {
+        if (c.tenantId !== tenantId) throw new Error('unit-of-work tenant mismatch')
+        stagedClaims.push({ ...c })
+      },
+      async get(id) {
+        return allClaims().find((c) => c.id === id && c.tenantId === tenantId) ?? null
+      },
+      async listByEntity(entityId) {
+        return allClaims().filter((c) => c.tenantId === tenantId && c.entityId === entityId)
+      },
+      async setStatus(id, status, supersedesClaimId) {
+        claimStatusOverrides.set(id, { status, supersedesClaimId })
+      },
+      async recordDecision(d) {
+        if (d.tenantId !== tenantId) throw new Error('unit-of-work tenant mismatch')
+        stagedDecisions.push({ ...d })
+      },
+      async maxRevision(entityId, controlKey) {
+        const revs = allClaims()
+          .filter(
+            (c) =>
+              c.tenantId === tenantId && c.entityId === entityId && c.controlKey === controlKey,
+          )
+          .map((c) => c.revision)
+        return revs.length > 0 ? Math.max(...revs) : 0
+      },
+    }
 
     const entities: EntityRepository = {
       async create(entity, evaluation) {
@@ -201,6 +261,7 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
     const uow: Uow = {
       tenantId,
       entities,
+      claims,
       async audit(ev) {
         stagedAudit.push({
           id: `aud_${randomUUID()}`,
@@ -242,6 +303,15 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       stores.audit.push(a)
     }
     stores.outbox.push(...stagedOutbox)
+    for (const c of stagedClaims) stores.claims.push(c)
+    for (const d of stagedDecisions) stores.decisions.push(d)
+    for (const [id, o] of claimStatusOverrides) {
+      const c = stores.claims.find((x) => x.id === id)
+      if (c) {
+        c.status = o.status
+        if (o.supersedesClaimId !== undefined) c.supersedesClaimId = o.supersedesClaimId
+      }
+    }
     return result
   }
 }

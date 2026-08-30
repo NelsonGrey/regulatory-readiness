@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 
-type InjectResponse = Awaited<ReturnType<FastifyInstance['inject']>>
+export type InjectResponse = Awaited<ReturnType<FastifyInstance['inject']>>
 
 export const TENANT = 't-demo'
 export const ACTOR = 'manager@acme'
@@ -34,7 +34,7 @@ export function bankEntityRequest() {
       usesSelfServiceTerminals: false,
       disproportionateBurdenClaimed: false,
       fundamentalAlterationClaimed: false,
-    } as Record<string, unknown>,
+    } as Record<string, string | number | boolean>,
   }
 }
 

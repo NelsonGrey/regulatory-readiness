@@ -71,15 +71,33 @@ describe('POST /api/v1/entities + matrix', () => {
 
     const matrix = res.json() as {
       summary: { total: number; requiredNow: number; notApplicable: number; optional: number }
-      rows: Array<{ control: string; applicability: string }>
+      entityStatus: string
+      readinessCounts: Record<string, number>
+      rows: Array<{
+        control: string
+        applicability: string
+        readiness: string
+        pendingClaims: number
+      }>
     }
     expect(matrix.summary.total).toBe(20)
     expect(matrix.summary.requiredNow).toBeGreaterThan(0)
 
-    const byControl = new Map(matrix.rows.map((r) => [r.control, r.applicability]))
-    expect(byControl.get('EAA-EN549-9-1-1-1')).toBe('REQUIRED_BY_SNAPSHOT')
-    expect(byControl.get('EAA-EN549-10-1-1-1')).toBe('NOT_APPLICABLE_TO_CLASSIFICATION')
-    expect(byControl.get('EAA-EN549-9-2-4-11')).toBe('OPTIONAL_IF_AVAILABLE')
+    // With no claims yet, every required control is MISSING and the entity is BLOCKED.
+    expect(matrix.entityStatus).toBe('BLOCKED')
+    expect(matrix.readinessCounts.MISSING).toBeGreaterThan(0)
+
+    const rows = new Map(matrix.rows.map((r) => [r.control, r]))
+    expect(rows.get('EAA-EN549-9-1-1-1')).toMatchObject({
+      applicability: 'REQUIRED_BY_SNAPSHOT',
+      readiness: 'MISSING',
+      pendingClaims: 0,
+    })
+    expect(rows.get('EAA-EN549-10-1-1-1')).toMatchObject({
+      applicability: 'NOT_APPLICABLE_TO_CLASSIFICATION',
+      readiness: 'NOT_APPLICABLE',
+    })
+    expect(rows.get('EAA-EN549-9-2-4-11')?.applicability).toBe('OPTIONAL_IF_AVAILABLE')
   })
 
   it('does not disclose an entity to another tenant', async () => {

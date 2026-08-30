@@ -49,6 +49,9 @@ export function mockApi(stubs: RouteStub[]): {
 }
 
 export function renderRoute(initialPath: string): RenderResult {
-  const router = createMemoryRouter(routes, { initialEntries: [initialPath] })
-  return render(<RouterProvider router={router} />)
+  const router = createMemoryRouter(routes, {
+    initialEntries: [initialPath],
+    future: { v7_relativeSplatPath: true },
+  })
+  return render(<RouterProvider router={router} future={{ v7_startTransition: true }} />)
 }

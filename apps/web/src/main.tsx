@@ -7,8 +7,12 @@ import './styles.css'
 const root = document.getElementById('root')
 if (!root) throw new Error('#root not found')
 
+const router = createBrowserRouter(routes, {
+  future: { v7_relativeSplatPath: true },
+})
+
 createRoot(root).render(
   <StrictMode>
-    <RouterProvider router={createBrowserRouter(routes)} />
+    <RouterProvider router={router} future={{ v7_startTransition: true }} />
   </StrictMode>,
 )

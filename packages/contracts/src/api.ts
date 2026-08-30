@@ -17,3 +17,33 @@ export const CreateEntityRequest = z.object({
   facts: z.record(FactValue),
 })
 export type CreateEntityRequest = z.infer<typeof CreateEntityRequest>
+
+export const ClaimOrigin = z.enum([
+  'SUPPLIER_ASSERTION',
+  'INTERNAL_ASSERTION',
+  'EXTRACTION_ACCEPTED',
+  'IMPORTED_APPROVED_DATA',
+])
+export type ClaimOrigin = z.infer<typeof ClaimOrigin>
+
+/** POST /api/v1/entities/:id/controls/:controlKey/claims */
+export const AssertClaimRequest = z.object({
+  value: z.string().min(1),
+  unit: z.string().optional(),
+  methodContext: z.string().optional(),
+  asOfDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD')
+    .optional(),
+  origin: ClaimOrigin.optional(),
+  note: z.string().optional(),
+  evidenceUrl: z.string().url().optional(),
+})
+export type AssertClaimRequest = z.infer<typeof AssertClaimRequest>
+
+/** POST /api/v1/claims/:claimId/decisions */
+export const ReviewDecisionRequest = z.object({
+  decision: z.enum(['APPROVED', 'REJECTED', 'CLARIFICATION_REQUESTED']),
+  reason: z.string().optional(),
+})
+export type ReviewDecisionRequest = z.infer<typeof ReviewDecisionRequest>

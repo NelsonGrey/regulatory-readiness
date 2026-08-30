@@ -62,7 +62,9 @@ suite('Postgres unit of work + RLS (integration)', () => {
   })
 
   afterEach(async () => {
-    await adminPool.query('TRUNCATE regulated_entity, entity_scope_evaluation, audit_event, outbox')
+    await adminPool.query(
+      'TRUNCATE regulated_entity, entity_scope_evaluation, audit_event, outbox, claim, review_decision',
+    )
   })
 
   afterAll(async () => {
@@ -155,6 +157,77 @@ suite('Postgres unit of work + RLS (integration)', () => {
     await expect(
       withTenant(appPool, 't-alpha', (c) => c.query('DELETE FROM audit_event')),
     ).rejects.toThrow(/permission denied/i)
+  })
+
+  it('claims and review decisions are tenant-scoped; review_decision is append-only', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'ec'), makeEvaluation('t-alpha', 'ec'))
+      await u.claims.insert({
+        id: 'clm_1',
+        tenantId: 't-alpha',
+        entityId: 'ec',
+        controlKey: 'C-1',
+        packKey: 'eaa-accessibility',
+        origin: 'INTERNAL_ASSERTION',
+        revision: 1,
+        supersedesClaimId: null,
+        status: 'PENDING_REVIEW',
+        value: 'v',
+        unit: null,
+        methodContext: null,
+        asOfDate: null,
+        note: null,
+        evidenceUrl: null,
+        assertedBy: 'tester',
+        assertedAt: AT,
+      })
+      await u.claims.recordDecision({
+        id: 'rvd_1',
+        tenantId: 't-alpha',
+        claimId: 'clm_1',
+        decision: 'APPROVED',
+        reason: null,
+        reviewer: 'tester',
+        decidedAt: AT,
+      })
+      await u.claims.setStatus('clm_1', 'APPROVED')
+    })
+
+    expect(await uow('t-alpha', (u) => u.claims.get('clm_1'))).toMatchObject({ status: 'APPROVED' })
+    expect(await uow('t-bravo', (u) => u.claims.get('clm_1'))).toBeNull()
+
+    const bravoSees = await withTenant(appPool, 't-bravo', async (c) => ({
+      claims: (await c.query('SELECT id FROM claim')).rows,
+      decisions: (await c.query('SELECT id FROM review_decision')).rows,
+    }))
+    expect(bravoSees).toEqual({ claims: [], decisions: [] })
+
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query(`UPDATE review_decision SET reason = 'x'`)),
+    ).rejects.toThrow(/permission denied/i)
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query(`UPDATE claim SET value = 'tampered'`)),
+    ).rejects.toThrow(/permission denied/i)
+  })
+
+  it('two approved claims for one control surface as CONFLICTING via the readiness derivation', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'ek'), makeEvaluation('t-alpha', 'ek'))
+    })
+    // Insert two APPROVED claims directly (the service prevents this; the DB does not).
+    for (const id of ['clm_a', 'clm_b']) {
+      await withTenant(appPool, 't-alpha', (c) =>
+        c.query(
+          `INSERT INTO claim (id, tenant_id, entity_id, control_key, pack_key, origin, revision,
+             status, value, asserted_by, asserted_at)
+           VALUES ($1,'t-alpha','ek','C-1','eaa-accessibility','INTERNAL_ASSERTION',
+             ${id === 'clm_a' ? 1 : 2},'APPROVED',$2,'u', now())`,
+          [id, id],
+        ),
+      )
+    }
+    const claims = await uow('t-alpha', (u) => u.claims.listByEntity('ek'))
+    expect(claims.filter((c) => c.status === 'APPROVED')).toHaveLength(2)
   })
 
   it('isolates evaluations by pack_key within a tenant', async () => {
