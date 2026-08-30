@@ -3,6 +3,7 @@ import type { Pool } from 'pg'
 import type { EntityScopeEvaluation, RegulatedEntity } from '@rre/domain'
 import { createPool, migrate, withTenant } from '@rre/db'
 import { pgUnitOfWork, type UnitOfWork } from '../db/uow.js'
+import { pgResolveGrant } from './requests.pg.js'
 
 const adminUrl = process.env.TEST_DATABASE_URL
 // The app connects as the non-superuser `rre_app` role (migrations 0002/0003) so
@@ -63,7 +64,9 @@ suite('Postgres unit of work + RLS (integration)', () => {
 
   afterEach(async () => {
     await adminPool.query(
-      'TRUNCATE regulated_entity, entity_scope_evaluation, audit_event, outbox, claim, review_decision',
+      `TRUNCATE regulated_entity, entity_scope_evaluation, audit_event, outbox, claim,
+        review_decision, evidence_request, request_item, access_token_grant,
+        contributor_submission, contributor_response_item`,
     )
   })
 
@@ -228,6 +231,79 @@ suite('Postgres unit of work + RLS (integration)', () => {
     }
     const claims = await uow('t-alpha', (u) => u.claims.listByEntity('ek'))
     expect(claims.filter((c) => c.status === 'APPROVED')).toHaveLength(2)
+  })
+
+  it('requests / submissions are RLS-scoped; grants resolve by hash without a tenant; submissions are append-only', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'er'), makeEvaluation('t-alpha', 'er'))
+      await u.requests.insertRequest({
+        id: 'req_1',
+        tenantId: 't-alpha',
+        entityId: 'er',
+        packKey: 'eaa-accessibility',
+        status: 'DRAFT',
+        message: null,
+        dueAt: null,
+        createdBy: 'tester',
+        createdAt: AT,
+      })
+      await u.requests.insertItem({
+        id: 'rqi_1',
+        tenantId: 't-alpha',
+        requestId: 'req_1',
+        controlKey: 'C-1',
+        instructions: null,
+        requiredInRequest: true,
+      })
+      await u.requests.insertGrant({
+        id: 'tkn_1',
+        tenantId: 't-alpha',
+        requestId: 'req_1',
+        tokenPrefix: 'abcd1234',
+        tokenHash: 'hash-xyz',
+        scope: 'contributor_submit',
+        expiresAt: '2099-01-01T00:00:00.000Z',
+        maxUses: null,
+        uses: 0,
+        revokedAt: null,
+        createdAt: AT,
+      })
+      await u.requests.insertSubmission({
+        id: 'sub_1',
+        tenantId: 't-alpha',
+        requestId: 'req_1',
+        submissionVersion: 1,
+        submitterIdentity: 'Jane',
+        receiptId: 'rcpt_1',
+        submittedAt: AT,
+      })
+    })
+
+    // grant resolves by hash from a plain pool with no app.tenant_id set
+    const grant = await pgResolveGrant(adminPool, 'hash-xyz')
+    expect(grant?.requestId).toBe('req_1')
+    expect(grant?.tenantId).toBe('t-alpha')
+
+    // another tenant sees no request / submission rows at all
+    const bravo = await withTenant(appPool, 't-bravo', async (c) => ({
+      requests: (await c.query('SELECT id FROM evidence_request')).rows,
+      submissions: (await c.query('SELECT id FROM contributor_submission')).rows,
+    }))
+    expect(bravo).toEqual({ requests: [], submissions: [] })
+    expect(await uow('t-bravo', (u) => u.requests.getRequest('req_1'))).toBeNull()
+
+    // contributor_submission is append-only; the grant can only change bookkeeping columns
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query(`DELETE FROM contributor_submission`)),
+    ).rejects.toThrow(/permission denied/i)
+    await expect(
+      withTenant(appPool, 't-alpha', (c) =>
+        c.query(`UPDATE access_token_grant SET request_id = 'x'`),
+      ),
+    ).rejects.toThrow(/permission denied/i)
+    await withTenant(appPool, 't-alpha', (c) =>
+      c.query(`UPDATE access_token_grant SET uses = uses + 1, revoked_at = now()`),
+    )
   })
 
   it('isolates evaluations by pack_key within a tenant', async () => {

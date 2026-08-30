@@ -4,8 +4,18 @@ import type { ClaimStatus, EntityScopeEvaluation, RegulatedEntity } from '@rre/d
 import { withTenant } from '@rre/db'
 import { PgEntityRepository } from '../repositories/entities.pg.js'
 import { PgClaimRepository } from '../repositories/claims.pg.js'
+import { PgRequestRepository } from '../repositories/requests.pg.js'
 import type { EntityRepository } from '../services/entities.js'
 import type { ClaimRecord, ClaimRepository, ReviewDecisionRecord } from '../services/claims.js'
+import type {
+  AccessGrantRecord,
+  EvidenceRequestRecord,
+  RequestItemRecord,
+  RequestRepository,
+  ResponseItemRecord,
+  SubmissionRecord,
+} from '../services/requests.js'
+import type { RequestStatus } from '@rre/domain'
 
 /** One audit event (engine TRD §20). Safe metadata only — never document text, claim values, or tokens. */
 export interface AuditInput {
@@ -56,6 +66,7 @@ export interface Uow {
   readonly tenantId: string
   readonly entities: EntityRepository
   readonly claims: ClaimRepository
+  readonly requests: RequestRepository
   audit(event: AuditInput): Promise<void>
   enqueue(topic: string, payload: unknown): Promise<void>
   queryAudit(query: AuditQuery): Promise<AuditRecord[]>
@@ -72,6 +83,7 @@ export function pgUnitOfWork(pool: Pool): UnitOfWork {
         tenantId,
         entities: new PgEntityRepository(client, tenantId),
         claims: new PgClaimRepository(client, tenantId),
+        requests: new PgRequestRepository(client, tenantId),
         async audit(ev) {
           await client.query(
             `INSERT INTO audit_event
@@ -168,6 +180,11 @@ export interface InMemoryStores {
   outbox: OutboxRecord[]
   claims: ClaimRecord[]
   decisions: ReviewDecisionRecord[]
+  requests: EvidenceRequestRecord[]
+  requestItems: RequestItemRecord[]
+  grants: AccessGrantRecord[]
+  submissions: SubmissionRecord[]
+  responseItems: ResponseItemRecord[]
 }
 
 export function createInMemoryStores(): InMemoryStores {
@@ -178,6 +195,11 @@ export function createInMemoryStores(): InMemoryStores {
     outbox: [],
     claims: [],
     decisions: [],
+    requests: [],
+    requestItems: [],
+    grants: [],
+    submissions: [],
+    responseItems: [],
   }
 }
 
@@ -197,6 +219,92 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       string,
       { status: ClaimStatus; supersedesClaimId?: string | null }
     >()
+    const stagedRequests: EvidenceRequestRecord[] = []
+    const stagedItems: RequestItemRecord[] = []
+    const stagedGrants: AccessGrantRecord[] = []
+    const stagedSubmissions: SubmissionRecord[] = []
+    const stagedResponseItems: ResponseItemRecord[] = []
+    const requestStatusOverrides = new Map<string, RequestStatus>()
+    const grantOverrides = new Map<string, { revokedAt?: string; usesInc?: number }>()
+
+    const allRequests = (): EvidenceRequestRecord[] =>
+      [...stores.requests, ...stagedRequests].map((r) => {
+        const s = requestStatusOverrides.get(r.id)
+        return s ? { ...r, status: s } : r
+      })
+    const allGrants = (): AccessGrantRecord[] =>
+      [...stores.grants, ...stagedGrants].map((g) => {
+        const o = grantOverrides.get(g.id)
+        return o
+          ? { ...g, revokedAt: o.revokedAt ?? g.revokedAt, uses: g.uses + (o.usesInc ?? 0) }
+          : g
+      })
+
+    const requests: RequestRepository = {
+      async insertRequest(r) {
+        if (r.tenantId !== tenantId) throw new Error('unit-of-work tenant mismatch')
+        stagedRequests.push({ ...r })
+      },
+      async insertItem(i) {
+        stagedItems.push({ ...i })
+      },
+      async getRequest(id) {
+        return allRequests().find((r) => r.id === id && r.tenantId === tenantId) ?? null
+      },
+      async listRequestsByEntity(entityId) {
+        return allRequests().filter((r) => r.tenantId === tenantId && r.entityId === entityId)
+      },
+      async listItems(requestId) {
+        return [...stores.requestItems, ...stagedItems].filter(
+          (i) => i.tenantId === tenantId && i.requestId === requestId,
+        )
+      },
+      async setRequestStatus(id, status) {
+        requestStatusOverrides.set(id, status)
+      },
+      async insertGrant(g) {
+        stagedGrants.push({ ...g })
+      },
+      async listGrantsByRequest(requestId) {
+        return allGrants().filter((g) => g.tenantId === tenantId && g.requestId === requestId)
+      },
+      async revokeGrant(id, at) {
+        grantOverrides.set(id, { ...grantOverrides.get(id), revokedAt: at })
+      },
+      async bumpGrantUses(id) {
+        const cur = grantOverrides.get(id)
+        grantOverrides.set(id, { ...cur, usesInc: (cur?.usesInc ?? 0) + 1 })
+      },
+      async insertSubmission(s) {
+        stagedSubmissions.push({ ...s })
+      },
+      async insertResponseItem(ri) {
+        stagedResponseItems.push({ ...ri })
+      },
+      async listSubmissions(requestId) {
+        return [...stores.submissions, ...stagedSubmissions].filter(
+          (s) => s.tenantId === tenantId && s.requestId === requestId,
+        )
+      },
+      async getSubmission(id) {
+        return (
+          [...stores.submissions, ...stagedSubmissions].find(
+            (s) => s.id === id && s.tenantId === tenantId,
+          ) ?? null
+        )
+      },
+      async listResponseItems(submissionId) {
+        return [...stores.responseItems, ...stagedResponseItems].filter(
+          (ri) => ri.tenantId === tenantId && ri.submissionId === submissionId,
+        )
+      },
+      async maxSubmissionVersion(requestId) {
+        const v = [...stores.submissions, ...stagedSubmissions]
+          .filter((s) => s.tenantId === tenantId && s.requestId === requestId)
+          .map((s) => s.submissionVersion)
+        return v.length > 0 ? Math.max(...v) : 0
+      },
+    }
 
     const allClaims = (): ClaimRecord[] =>
       [...stores.claims, ...stagedClaims].map((c) => {
@@ -262,6 +370,7 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       tenantId,
       entities,
       claims,
+      requests,
       async audit(ev) {
         stagedAudit.push({
           id: `aud_${randomUUID()}`,
@@ -310,6 +419,22 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       if (c) {
         c.status = o.status
         if (o.supersedesClaimId !== undefined) c.supersedesClaimId = o.supersedesClaimId
+      }
+    }
+    for (const r of stagedRequests) stores.requests.push(r)
+    for (const i of stagedItems) stores.requestItems.push(i)
+    for (const g of stagedGrants) stores.grants.push(g)
+    for (const s of stagedSubmissions) stores.submissions.push(s)
+    for (const ri of stagedResponseItems) stores.responseItems.push(ri)
+    for (const [id, s] of requestStatusOverrides) {
+      const r = stores.requests.find((x) => x.id === id)
+      if (r) r.status = s
+    }
+    for (const [id, o] of grantOverrides) {
+      const g = stores.grants.find((x) => x.id === id)
+      if (g) {
+        if (o.revokedAt !== undefined) g.revokedAt = o.revokedAt
+        if (o.usesInc) g.uses += o.usesInc
       }
     }
     return result

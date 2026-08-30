@@ -47,3 +47,39 @@ export const ReviewDecisionRequest = z.object({
   reason: z.string().optional(),
 })
 export type ReviewDecisionRequest = z.infer<typeof ReviewDecisionRequest>
+
+/** POST /api/v1/entities/:id/requests */
+export const CreateRequestRequest = z.object({
+  controlKeys: z.array(z.string().min(1)).min(1),
+  requiredControlKeys: z.array(z.string().min(1)).optional(),
+  message: z.string().optional(),
+  dueAt: z.string().optional(),
+  expiresInDays: z.number().int().positive().max(365).optional(),
+})
+export type CreateRequestRequest = z.infer<typeof CreateRequestRequest>
+
+export const AvailabilityState = z.enum([
+  'VALUE_SUPPLIED',
+  'UNAVAILABLE',
+  'UNKNOWN',
+  'NOT_APPLICABLE',
+  'NEEDS_CLARIFICATION',
+])
+
+/** POST /contributor/v1/requests/:token/submit */
+export const ContributorSubmitRequest = z.object({
+  submitterIdentity: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        requestItemId: z.string().min(1),
+        value: z.string().optional(),
+        unit: z.string().optional(),
+        methodNote: z.string().optional(),
+        availabilityState: AvailabilityState,
+        comment: z.string().optional(),
+      }),
+    )
+    .min(1),
+})
+export type ContributorSubmitRequest = z.infer<typeof ContributorSubmitRequest>

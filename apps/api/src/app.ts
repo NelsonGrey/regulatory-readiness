@@ -6,11 +6,14 @@ import { createInMemoryStores, inMemoryUnitOfWork, type UnitOfWork } from './db/
 import { EntityService } from './services/entities.js'
 import { AuditService } from './services/audit.js'
 import { ClaimService } from './services/claims.js'
+import { ContributorService, RequestService, type ResolveGrant } from './services/requests.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerPackRoutes } from './routes/packs.js'
 import { registerEntityRoutes } from './routes/entities.js'
 import { registerAuditRoutes } from './routes/audit.js'
 import { registerClaimRoutes } from './routes/claims.js'
+import { registerRequestRoutes } from './routes/requests.js'
+import { registerContributorRoutes } from './routes/contributor.js'
 
 /** Repo `packs/` directory, resolved from this file (works in dev, test, and the bundle). */
 const DEFAULT_PACKS_DIR = fileURLToPath(new URL('../../../packs', import.meta.url))
@@ -23,6 +26,12 @@ export interface BuildAppOptions {
   packRegistry?: PackRegistry
   /** Unit-of-work runner (persistence + audit + outbox). Defaults to a fresh in-memory one. */
   unitOfWork?: UnitOfWork
+  /**
+   * Resolves a contributor token to its grant before the tenant is known. Must
+   * be supplied whenever `unitOfWork` is; the default in-memory build derives it
+   * from the same store.
+   */
+  resolveGrant?: ResolveGrant
 }
 
 /**
@@ -33,7 +42,15 @@ export interface BuildAppOptions {
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const log = createLogger({ level: options.logLevel ?? 'info', base: { component: 'api' } })
   const packsDir = options.packsDir ?? process.env.PACKS_DIR ?? DEFAULT_PACKS_DIR
-  const unitOfWork = options.unitOfWork ?? inMemoryUnitOfWork(createInMemoryStores())
+
+  let unitOfWork = options.unitOfWork
+  let resolveGrant = options.resolveGrant
+  if (!unitOfWork) {
+    const stores = createInMemoryStores()
+    unitOfWork = inMemoryUnitOfWork(stores)
+    resolveGrant = async (hash) => stores.grants.find((g) => g.tokenHash === hash) ?? null
+  }
+  const resolve: ResolveGrant = resolveGrant ?? (async () => null)
 
   const app = Fastify({ logger: false })
 
@@ -50,8 +67,19 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       await registerEntityRoutes(v1, { entities: new EntityService(unitOfWork, registry) })
       await registerAuditRoutes(v1, { audit: new AuditService(unitOfWork) })
       await registerClaimRoutes(v1, { claims: new ClaimService(unitOfWork, registry) })
+      await registerRequestRoutes(v1, { requests: new RequestService(unitOfWork, registry) })
     },
     { prefix: '/api/v1' },
+  )
+
+  app.register(
+    async (portal) => {
+      const registry = options.packRegistry ?? (await getPackRegistry(packsDir))
+      await registerContributorRoutes(portal, {
+        contributor: new ContributorService(unitOfWork, resolve, registry),
+      })
+    },
+    { prefix: '/contributor/v1' },
   )
 
   return app

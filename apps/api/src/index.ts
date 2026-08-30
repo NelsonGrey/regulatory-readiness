@@ -1,12 +1,14 @@
 import { createLogger, type LogLevel } from '@rre/observability'
-import { buildApp } from './app.js'
 import { createPool, migrate } from '@rre/db'
+import { buildApp } from './app.js'
 import {
   createInMemoryStores,
   inMemoryUnitOfWork,
   pgUnitOfWork,
   type UnitOfWork,
 } from './db/uow.js'
+import { pgResolveGrant } from './repositories/requests.pg.js'
+import type { ResolveGrant } from './services/requests.js'
 
 function parseLogLevel(value: string | undefined): LogLevel {
   return value === 'debug' || value === 'info' || value === 'warn' || value === 'error'
@@ -21,21 +23,25 @@ async function main(): Promise<void> {
   const port = Number(process.env.API_PORT ?? 3000)
 
   let unitOfWork: UnitOfWork
+  let resolveGrant: ResolveGrant | undefined
+
   const databaseUrl = process.env.DATABASE_URL
   if (databaseUrl) {
-    // Migrations run as the owner (DATABASE_URL); the app connects as the
-    // non-superuser role so RLS is enforced (APP_DATABASE_URL, ADR 0002).
     const migrationPool = createPool(databaseUrl)
     const ran = await migrate(migrationPool)
     log.info('migrations', { applied: ran })
     await migrationPool.end()
-    unitOfWork = pgUnitOfWork(createPool(process.env.APP_DATABASE_URL ?? databaseUrl))
+    const appPool = createPool(process.env.APP_DATABASE_URL ?? databaseUrl)
+    unitOfWork = pgUnitOfWork(appPool)
+    resolveGrant = (hash) => pgResolveGrant(appPool, hash)
   } else {
     log.warn('DATABASE_URL not set — using in-memory storage')
-    unitOfWork = inMemoryUnitOfWork(createInMemoryStores())
+    const stores = createInMemoryStores()
+    unitOfWork = inMemoryUnitOfWork(stores)
+    resolveGrant = async (hash) => stores.grants.find((g) => g.tokenHash === hash) ?? null
   }
 
-  const app = buildApp({ logLevel, unitOfWork })
+  const app = buildApp({ logLevel, unitOfWork, resolveGrant })
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.on(signal, () => {
