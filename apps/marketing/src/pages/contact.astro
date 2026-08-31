@@ -1,0 +1,10 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Limitation from '../components/Limitation.astro'
+import { siteConfig } from '../config'
+---
+
+<BaseLayout title="Contact" description="Book a regulatory readiness scoping call, contact the team, report a security issue, or sign in to an existing workspace.">
+  <header class="page-header"><div class="shell"><p class="eyebrow">Contact</p><h1>Start with the regulation, entity, and deadline.</h1><p class="lead">A scoping call confirms whether the readiness sprint fits, what evidence owners are involved, and what the package should contain.</p><Limitation /></div></header>
+  <section class="section" id="schedule"><div class="shell contact-grid"><div class="contact-card"><p class="eyebrow">New engagement</p><h2>Book a scoping call</h2><p>The scheduler is configured through <code>PUBLIC_SCHEDULER_URL</code>. It opens only after you choose the link, so no scheduler code or cookies load with this page.</p><a class="button" href={siteConfig.schedulerUrl === '/contact#schedule' ? `mailto:${siteConfig.contactEmail}?subject=Readiness%20sprint%20scoping` : siteConfig.schedulerUrl} data-event="open-scheduler">Request a scoping call</a><p class="fine-print">Purpose: respond to your enquiry and scope a potential engagement. No marketing opt-in is implied. See the <a href="/legal/privacy">privacy notice</a>.</p></div><div class="contact-card"><h2>Other routes</h2><p><strong>General:</strong><br/><a href={`mailto:${siteConfig.contactEmail}`}>{siteConfig.contactEmail}</a></p><p><strong>Security:</strong><br/><a href={`mailto:${siteConfig.securityEmail}`}>{siteConfig.securityEmail}</a></p><p><strong>Press:</strong><br/><a href={`mailto:${siteConfig.pressEmail}`}>{siteConfig.pressEmail}</a></p><p><strong>Existing customer:</strong><br/><a href={siteConfig.appUrl}>Sign in to the operator app</a></p></div></div></section>
+</BaseLayout>

@@ -1,0 +1,19 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Limitation from '../components/Limitation.astro'
+import CTA from '../components/CTA.astro'
+---
+
+<BaseLayout title="Platform" description="Explore the control catalog, applicability rules, evidence lineage, conflict handling, snapshots, and portable exports behind Regulatory Readiness.">
+  <header class="page-header"><div class="shell"><p class="eyebrow">Platform</p><h1>The preparation layer between regulation and publication.</h1><p class="lead">A version-aware system for collecting, reviewing, and packaging evidence across regulations.</p><Limitation /></div></header>
+  <section class="section"><div class="shell card-grid">
+    <article class="card"><h2>Versioned control catalog</h2><p>Every control retains its official identifier, source, expected evidence, applicability expression, and snapshot version.</p><p><strong>Why it matters:</strong> you can state which source basis a package used.</p></article>
+    <article class="card"><h2>Deterministic applicability</h2><p>Declared rules evaluate known entity facts. Unknown inputs stay conditional instead of becoming an optimistic answer.</p><p><strong>Why it matters:</strong> ambiguity remains actionable.</p></article>
+    <article class="card"><h2>Human review gates</h2><p>Extraction can propose; only an authorized person accepts or rejects. A proposal without a stable source location cannot be accepted.</p><p><strong>Why it matters:</strong> automation never silently becomes approval.</p></article>
+    <article class="card"><h2>Conflict engine</h2><p>Competing values, units, methods, and time periods remain distinct and linked to their sources.</p><p><strong>Why it matters:</strong> disagreement is visible before export.</p></article>
+    <article class="card"><h2>Scoped contributor links</h2><p>External parties receive an expiring, revocable request for a defined object and purpose—without broad workspace access.</p><p><strong>Why it matters:</strong> suppliers can contribute without a training project.</p></article>
+    <article class="card"><h2>Snapshots and portable export</h2><p>Dated snapshots preserve control versions, claims, evidence references, exceptions, approvals, and hashes.</p><p><strong>Why it matters:</strong> the review record can leave the platform.</p></article>
+  </div></section>
+  <section class="section section-alt"><div class="shell split"><div><p class="eyebrow">One engine + packs</p><h2>Consistent workflow. Regulation-specific source material.</h2></div><div class="prose"><p>The engine owns evidence, review, contribution, readiness, export, and tenant boundaries. A pack contributes data and declared rules—not bespoke application branches.</p><p><a href="/packs">See available and exploratory packs →</a></p></div></div></section>
+  <CTA title="Evaluate the platform against a real entity." text="A scoping call confirms the regulation, entity boundary, contributors, and expected deliverables." />
+</BaseLayout>

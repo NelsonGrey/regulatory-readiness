@@ -1,0 +1,11 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Limitation from '../components/Limitation.astro'
+import { siteConfig } from '../config'
+---
+
+<BaseLayout title="Pricing" description="A transparent, concierge-assisted Regulatory Readiness Sprint: indicative EUR 750–1,500 per entity and regulation.">
+  <header class="page-header"><div class="shell"><p class="eyebrow">Concierge-first pricing</p><h1>Start with a scoped readiness sprint.</h1><p class="lead">One entity, one regulation, and a reviewable outcome—with scope confirmed before work begins.</p><Limitation /></div></header>
+  <section class="section"><div class="shell"><div class="offer"><div><p class="eyebrow">Regulatory Readiness Sprint</p><p class="price">€750–€1,500</p><p>per entity, per regulation</p><p class="fine-print">Indicative range. Final price is confirmed after a scoping call and depends on entity complexity, contributors, and evidence volume.</p><a class="button" href={siteConfig.schedulerUrl} data-event="book-scoping-call">Book a scoping call</a></div><div><h2>What is included</h2><ul class="check-list"><li>Scope and applicability-facts setup</li><li>Evidence request plan for internal and external owners</li><li>Requirement-level readiness matrix</li><li>Missing, conflict, stale, and conditional report</li><li>Dated source-linked export package</li><li>Assisted findings review</li></ul><h3>Not included by default</h3><p>Specialist legal advice, accredited assessment, laboratory work, or specialist metric collection. These need separate qualified providers and scope.</p></div></div></div></section>
+  <section class="section section-alt"><div class="shell card-grid"><article class="card"><h2>Contributors never pay</h2><p>Suppliers and colleagues respond to a scoped request without purchasing a seat.</p></article><article class="card"><h2>No free-trial theatre</h2><p>The first engagement is assisted so the method and deliverables can be validated against real work.</p></article><article class="card"><h2>Subscription later</h2><p>Ongoing subscription options remain roadmap work until paid pilots establish repeatable value.</p></article></div></section>
+</BaseLayout>

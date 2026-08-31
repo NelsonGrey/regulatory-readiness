@@ -1,11 +1,9 @@
+@import '@rre/brand/brand.css';
+
 :root {
-  --fg: #1a1a1a;
-  --muted: #5c5c5c;
-  --border: #d8d8d8;
-  --bg: #fafafa;
-  --panel: #ffffff;
-  --accent: #1c4e80;
-  --danger: #a3261d;
+  --fg: var(--ink);
+  --bg: var(--ground);
+  --panel: var(--surface);
 }
 
 * {

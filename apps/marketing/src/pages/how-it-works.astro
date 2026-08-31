@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Limitation from '../components/Limitation.astro'
+import CTA from '../components/CTA.astro'
+---
+
+<BaseLayout title="How it works" description="Follow the regulatory readiness method from versioned requirements and applicability through evidence review and portable export.">
+  <header class="page-header"><div class="shell"><p class="eyebrow">The method</p><h1>Readiness is a chain of reviewable decisions.</h1><p class="lead">The engine keeps requirements, applicability, evidence, assertions, and approved claims distinct—then records the state at a point in time.</p><Limitation /></div></header>
+  <section class="section"><div class="shell">
+    <div class="flow" aria-label="Readiness workflow"><div><strong>Decompose</strong><p>Version the source requirements.</p></div><div><strong>Decide</strong><p>Evaluate applicability from entity facts.</p></div><div><strong>Evidence</strong><p>Collect, locate, and review sources.</p></div><div><strong>Package</strong><p>Snapshot and export the honest state.</p></div></div>
+    <div class="card-grid" style="margin-top:3rem">
+      <article class="card"><span class="number">01</span><h2>Start from a governed pack</h2><p>A pack decomposes source material into stable control keys, expected evidence, applicability expressions, and source references.</p></article>
+      <article class="card"><span class="number">02</span><h2>Make applicability deterministic</h2><p>Entity facts drive declared rules. Missing facts produce a conditional result; the engine does not guess.</p></article>
+      <article class="card"><span class="number">03</span><h2>Assign the right owner</h2><p>Operators request evidence from internal owners or scoped external contributors, with an expiry and a clear purpose.</p></article>
+      <article class="card"><span class="number">04</span><h2>Separate source from claim</h2><p>An original file is not automatically a conclusion. Assertions remain proposals until a person accepts or rejects them.</p></article>
+      <article class="card"><span class="number">05</span><h2>Resolve contradictions</h2><p>Competing values stay visible, source-linked, and unresolved until a reviewer records a decision.</p></article>
+      <article class="card"><span class="number">06</span><h2>Snapshot and export</h2><p>A dated package includes sources, approved claims, outstanding exceptions, decisions, and version identifiers.</p></article>
+    </div>
+  </div></section>
+  <section class="section section-alt"><div class="shell split"><div><p class="eyebrow">Lineage</p><h2>Approval never erases the journey.</h2><p class="lead">The exported answer remains connected to the precise source location and the human decision that approved it.</p></div><figure class="diagram"><svg viewBox="0 0 720 230" role="img" aria-labelledby="lineage-title lineage-desc"><title id="lineage-title">Evidence to approved claim lineage</title><desc id="lineage-desc">A source document and location lead to an assertion, a review decision, and an approved claim.</desc><defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="currentColor"/></marker></defs><g fill="var(--surface-raised)" stroke="var(--accent)" stroke-width="2"><rect x="20" y="70" width="130" height="80"/><rect x="200" y="70" width="130" height="80"/><rect x="380" y="70" width="130" height="80"/><rect x="560" y="70" width="140" height="80"/></g><g fill="var(--ink)" font-family="system-ui" font-size="17" text-anchor="middle"><text x="85" y="105">Evidence</text><text x="85" y="128">location</text><text x="265" y="116">Assertion</text><text x="445" y="105">Human review</text><text x="445" y="128">decision</text><text x="630" y="105">Approved</text><text x="630" y="128">claim</text></g><g stroke="var(--focus)" stroke-width="3" marker-end="url(#arrow)"><path d="M150 110h46"/><path d="M330 110h46"/><path d="M510 110h46"/></g></svg><figcaption>Text alternative: evidence location → assertion → human review decision → approved claim.</figcaption></figure></div></section>
+  <section class="section"><div class="shell split"><div><p class="eyebrow">Change without surprise</p><h2>Re-assess when the source changes.</h2></div><div class="prose"><p>A newly approved source creates a new control snapshot. The engine compares it with the prior version and identifies affected requirements and entities.</p><p>Your team sees the impact before choosing to migrate. Existing approved evidence remains available; it is re-evaluated rather than silently discarded.</p></div></div></section>
+  <CTA title="Put one regulation through the method." />
+</BaseLayout>

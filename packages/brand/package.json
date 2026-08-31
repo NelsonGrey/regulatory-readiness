@@ -1,0 +1,14 @@
+{
+  "name": "@rre/brand",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./brand.css": "./src/brand.css",
+    "./tokens": "./src/tokens.ts"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist"
+  }
+}

@@ -4,6 +4,8 @@
     { "path": "packages/observability" },
     { "path": "packages/db" },
     { "path": "packages/contracts" },
+    { "path": "packages/brand" },
+    { "path": "packages/copy-guard" },
     { "path": "packages/domain" },
     { "path": "packages/control-catalog" },
     { "path": "packages/authorization" },

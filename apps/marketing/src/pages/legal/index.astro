@@ -1,0 +1,6 @@
+---
+import { getCollection } from 'astro:content'
+import BaseLayout from '../../layouts/BaseLayout.astro'
+const documents = (await getCollection('legal')).sort((a, b) => a.data.title.localeCompare(b.data.title))
+---
+<BaseLayout title="Legal" description="Privacy, cookie, website-term, data-processing, and sub-processor documents for Regulatory Readiness."><header class="legal-header"><div class="narrow"><p class="eyebrow">Legal</p><h1>Public notices and customer terms.</h1><p class="lead">Visible placeholders identify every document that still requires owner or counsel approval before launch.</p></div></header><section class="section"><div class="narrow article-list">{documents.map((document) => <article class="article-item"><time datetime={document.data.lastUpdated.toISOString()}>Updated {document.data.lastUpdated.toLocaleDateString('en-IE')}</time><div><h2><a href={`/legal/${document.data.slug}`}>{document.data.title}</a></h2></div></article>)}</div></section></BaseLayout>

@@ -1,0 +1,16 @@
+---
+import { getCollection } from 'astro:content'
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import Limitation from '../../components/Limitation.astro'
+import CTA from '../../components/CTA.astro'
+const packs = (await getCollection('packs')).sort((a, b) => a.data.status.localeCompare(b.data.status))
+---
+
+<BaseLayout title="Regulation packs" description="Browse available and exploratory regulatory evidence-readiness packs built on one shared engine.">
+  <header class="page-header"><div class="shell"><p class="eyebrow">Pack library</p><h1>One method. Regulation-specific sources.</h1><p class="lead">A pack is a versioned control catalog plus declared rules. Status labels distinguish what is available now from what is still research.</p><Limitation /></div></header>
+  <section class="section"><div class="shell card-grid">
+    {packs.map((pack) => <article class="card"><span class:list={['status', pack.data.status === 'available' ? 'status-available' : 'status-roadmap']}>{pack.data.status}</span><h2 style="margin-top:1rem">{pack.data.title}</h2><p>{pack.data.jurisdiction} · {pack.data.regulation}</p><p>{pack.data.summary}</p><a class="card-link" href={`/packs/${pack.data.slug}`}>{pack.data.status === 'available' ? 'Explore this pack' : 'Read the discovery note'} →</a></article>)}
+  </div></section>
+  <section class="section section-alt"><div class="shell split"><div><p class="eyebrow">Pack governance</p><h2>Adding a source does not silently change a customer record.</h2></div><div class="prose"><p>Each production control snapshot passes a two-person source-review gate. A later snapshot produces an impact comparison; customers choose when to adopt it per entity.</p><p>Roadmap cards deliberately carry no dates. Research becomes an available pack only after source, rule, and regression review.</p></div></div></section>
+  <CTA title="Start with the EAA pack." />
+</BaseLayout>

@@ -1,0 +1,11 @@
+---
+import { getCollection } from 'astro:content'
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import { siteConfig } from '../../config'
+const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+---
+
+<BaseLayout title="Deadline briefings" description="Plain-language notes on regulation deadlines, evidence readiness, pack governance, and source change.">
+  <header class="page-header"><div class="shell"><p class="eyebrow">Deadline briefings</p><h1>Methods, source changes, and practical preparation.</h1><p class="lead">Editorial notes for the people who have to turn a regulation into owned, reviewable work.</p></div></header>
+  <section class="section"><div class="shell"><div class="article-list">{posts.map((post) => <article class="article-item"><time datetime={post.data.date.toISOString()}>{post.data.date.toLocaleDateString('en-IE', { day:'numeric', month:'long', year:'numeric' })}</time><div><div>{post.data.tags.map((tag) => <span class="tag">{tag}</span>)}</div><h2><a href={`/blog/${post.data.slug}`}>{post.data.title}</a></h2><p>{post.data.summary}</p></div></article>)}</div><div class="contact-card" style="margin-top:4rem"><p class="eyebrow">Occasional email</p><h2>Subscribe to deadline briefings</h2><p>Double opt-in newsletter capture is planned with the native lead endpoint. Until then, request an invitation by email; no address is added without confirmation.</p><a class="button button-secondary" href={`mailto:${siteConfig.contactEmail}?subject=Deadline%20briefings%20invitation`}>Request an invitation</a></div></div></section>
+</BaseLayout>

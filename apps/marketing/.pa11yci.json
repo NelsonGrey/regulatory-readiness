@@ -1,0 +1,13 @@
+{
+  "defaults": {
+    "standard": "WCAG2AA",
+    "timeout": 20000,
+    "chromeLaunchConfig": { "args": ["--no-sandbox"] }
+  },
+  "urls": [
+    "http://127.0.0.1:4321/",
+    "http://127.0.0.1:4321/how-it-works/",
+    "http://127.0.0.1:4321/packs/eu-accessibility-act/",
+    "http://127.0.0.1:4321/contact/"
+  ]
+}

@@ -1,0 +1,75 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Limitation from '../components/Limitation.astro'
+import CTA from '../components/CTA.astro'
+import { siteConfig } from '../config'
+---
+
+<BaseLayout title="Regulatory Readiness" description="Know exactly what is evidenced, missing, conflicting, or stale—and prepare a dated, source-linked package for review.">
+  <section class="hero">
+    <div class="shell hero-grid">
+      <div>
+        <p class="eyebrow">Regulatory evidence readiness</p>
+        <h1>Know what is ready. <em>See what is not.</em></h1>
+        <p class="lead">Collect evidence from your team and suppliers, map it to versioned requirements, resolve contradictions, and export a dated package that a reviewer can follow.</p>
+        <div class="hero-actions">
+          <a class="button" href={siteConfig.schedulerUrl} data-event="book-sprint">Book a readiness sprint <span aria-hidden="true">→</span></a>
+          <a class="button button-secondary" href="/how-it-works">See how it works</a>
+        </div>
+      </div>
+      <div class="status-map" aria-label="Example requirement readiness states">
+        <div class="status-row" style="--status-color:#24633c"><strong>Evidenced</strong><span>Source approved</span></div>
+        <div class="status-row" style="--status-color:#a3261d"><strong>Missing</strong><span>Owner assigned</span></div>
+        <div class="status-row" style="--status-color:#c45b12"><strong>Conflicting</strong><span>Review needed</span></div>
+        <div class="status-row" style="--status-color:#697782"><strong>Stale</strong><span>Source changed</span></div>
+        <div class="status-row" style="--status-color:#1c4e80"><strong>Conditional</strong><span>Fact needed</span></div>
+      </div>
+    </div>
+    <div class="shell"><Limitation /></div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="shell">
+      <div class="section-heading"><div><p class="eyebrow">The honest view</p><h2>A status per requirement. No average that hides risk.</h2></div><p>Every approved value keeps its source. Unknown applicability stays conditional. Conflicts remain visible until a person resolves them.</p></div>
+      <div class="card-grid">
+        <article class="card"><span class="number">01</span><h3>Find the real gaps</h3><p>Distinguish absent evidence from old evidence, disputed claims, and requirements that are not yet due.</p></article>
+        <article class="card"><span class="number">02</span><h3>Collect without friction</h3><p>Send tightly scoped requests to colleagues and suppliers without creating full workspace accounts.</p></article>
+        <article class="card"><span class="number">03</span><h3>Keep provenance intact</h3><p>Separate original evidence, assertions, and approved claims so every decision remains reviewable.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="shell split">
+      <div><p class="eyebrow">One engine, many packs</p><h2>A new regulation adds a pack, not another silo.</h2><p class="lead">Each pack contains a governed, versioned control catalog and declared applicability rules. The workflow stays familiar as your obligations change.</p><a class="card-link" href="/packs">Browse the pack library →</a></div>
+      <ul class="feature-list">
+        <li><strong>Available first: EU Accessibility Act readiness</strong><span>For services and products sold in Ireland; enforcement has applied since 28 June 2025.</span></li>
+        <li><strong>Source-review gate</strong><span>Production control snapshots require two-person source review.</span></li>
+        <li><strong>Change impact before migration</strong><span>See affected requirements and entities before adopting a new snapshot.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="shell">
+      <div class="section-heading"><div><p class="eyebrow">A controlled path</p><h2>From source to portable package.</h2></div><a class="card-link" href="/how-it-works">Explore the full method →</a></div>
+      <div class="flow" aria-label="Four-step readiness process"><div><strong>1. Scope</strong><p>Choose an entity, pack, and source snapshot.</p></div><div><strong>2. Collect</strong><p>Assign facts and evidence to the right owners.</p></div><div><strong>3. Review</strong><p>Resolve conflicts and approve source-linked claims.</p></div><div><strong>4. Export</strong><p>Create a dated package with gaps preserved.</p></div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="shell">
+      <div class="section-heading"><div><p class="eyebrow">Why a preparation layer</p><h2>Useful systems exist. The missing layer connects them.</h2></div><p>We do not replace specialist judgment or systems of record. We make the evidence journey explicit between them.</p></div>
+      <div class="comparison-wrap"><table><thead><tr><th scope="col">Alternative</th><th scope="col">Its strength</th><th scope="col">The gap we address</th></tr></thead><tbody>
+        <tr><th scope="row">Point tool</th><td>Deep workflow for one rule set</td><td>One evidence model across multiple packs</td></tr>
+        <tr><th scope="row">Enterprise GRC</th><td>Broad risk and governance coverage</td><td>Concrete, source-linked entity preparation for smaller teams</td></tr>
+        <tr><th scope="row">PIM / PLM / QMS</th><td>Authoritative operational records</td><td>Regulation-specific applicability, review state, and export</td></tr>
+        <tr><th scope="row">Shared drive / spreadsheet</th><td>Familiar and flexible</td><td>Ownership, contradictions, provenance, and repeatable review</td></tr>
+        <tr><th scope="row">Specialist adviser</th><td>Expert interpretation and judgment</td><td>A structured evidence workspace before and after the engagement</td></tr>
+      </tbody></table></div>
+    </div>
+  </section>
+
+  <section class="section-tight section-alt"><div class="shell section-heading"><div><p class="eyebrow">Trust by design</p><h2>EU-region architecture. Portable exports. Human review gates.</h2></div><p><a href="/security">Review the security posture</a> and see which controls are implemented versus on the roadmap.</p></div></section>
+  <CTA />
+</BaseLayout>

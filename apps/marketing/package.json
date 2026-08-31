@@ -1,0 +1,35 @@
+{
+  "name": "@rre/marketing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check",
+    "lint": "astro check",
+    "lint:copy": "tsx scripts/lint-copy.ts",
+    "test:a11y": "pa11y-ci --config .pa11yci.json",
+    "test:lighthouse": "lhci autorun --config=lighthouserc.json",
+    "clean": "rm -rf dist .astro"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^7.0.8",
+    "@astrojs/rss": "^4.0.19",
+    "@astrojs/sitemap": "^3.7.3",
+    "@rre/brand": "workspace:*",
+    "astro": "^7.2.9",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@lhci/cli": "^0.15.1",
+    "@rre/copy-guard": "workspace:*",
+    "@types/node": "^22.10.2",
+    "pa11y-ci": "^4.1.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "wait-on": "^9.1.0"
+  }
+}

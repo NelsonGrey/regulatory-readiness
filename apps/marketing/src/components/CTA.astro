@@ -1,0 +1,13 @@
+---
+import { siteConfig } from '../config'
+const { title = 'Make the true state visible.', text = 'Scope a focused readiness sprint around one entity and one regulation.' } = Astro.props
+---
+
+<section class="cta-band" aria-labelledby="cta-title">
+  <div>
+    <p class="eyebrow">Start with a scoped sprint</p>
+    <h2 id="cta-title">{title}</h2>
+    <p>{text}</p>
+  </div>
+  <a class="button button-light" href={siteConfig.schedulerUrl} data-event="book-sprint">Book a readiness sprint <span aria-hidden="true">→</span></a>
+</section>

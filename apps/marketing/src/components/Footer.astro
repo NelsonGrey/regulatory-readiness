@@ -1,0 +1,30 @@
+---
+import { siteConfig } from '../config'
+import Wordmark from './Wordmark.astro'
+---
+
+<footer class="site-footer">
+  <div class="shell footer-grid">
+    <div>
+      <a class="brand-link" href="/"><Wordmark compact /></a>
+      <p class="footer-statement">Regulatory evidence readiness — not legal advice, conformity assessment, or authority approval.</p>
+      <p class="fine-print">No non-essential cookies at launch. Cookieless measurement only when configured.</p>
+    </div>
+    <nav aria-label="Product links">
+      <h2>Explore</h2>
+      <a href="/how-it-works">How it works</a><a href="/platform">Platform</a><a href="/packs">Packs</a><a href="/pricing">Pricing</a>
+    </nav>
+    <nav aria-label="Company links">
+      <h2>Company</h2>
+      <a href="/about">About</a><a href="/security">Security</a><a href="/accessibility">Accessibility</a><a href="/contact">Contact</a>
+    </nav>
+    <nav aria-label="Legal links">
+      <h2>Legal</h2>
+      <a href="/legal/privacy">Privacy</a><a href="/legal/cookies">Cookies</a><a href="/legal/terms">Terms</a><a href="/legal/dpa">DPA</a><a href="/legal/sub-processors">Sub-processors</a>
+    </nav>
+  </div>
+  <div class="shell footer-bottom">
+    <p>{siteConfig.legalName} · {siteConfig.address}</p>
+    <p><a href={`mailto:${siteConfig.securityEmail}`}>Responsible disclosure</a> · <a href={`mailto:${siteConfig.pressEmail}`}>Press</a></p>
+  </div>
+</footer>

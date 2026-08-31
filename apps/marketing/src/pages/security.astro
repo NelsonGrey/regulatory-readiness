@@ -1,0 +1,20 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Limitation from '../components/Limitation.astro'
+import CTA from '../components/CTA.astro'
+import { siteConfig } from '../config'
+---
+
+<BaseLayout title="Security and trust" description="The planned EU-region security architecture, current implementation boundary, data handling principles, and responsible disclosure path.">
+  <header class="page-header"><div class="shell"><p class="eyebrow">Security and trust</p><h1>Claims separated from roadmap—here too.</h1><p class="lead">The architecture targets tenant isolation, controlled external access, protected evidence, portable exports, and accountable support. This page marks what is designed versus production-verified.</p><Limitation /></div></header>
+  <section class="section"><div class="shell"><div class="todo">Pilot status: the repository contains the application foundations and security requirements. Production AWS controls, independent verification, support operations, and deletion completion evidence are roadmap until deployed and tested.</div><div class="card-grid" style="margin-top:2rem">
+    <article class="card"><span class="status status-roadmap">Roadmap</span><h2 style="margin-top:1rem">EU-region hosting</h2><p>Primary production architecture is specified for AWS eu-west-1 (Ireland), with separate environment accounts and private data services.</p></article>
+    <article class="card"><span class="status status-roadmap">Partially implemented</span><h2 style="margin-top:1rem">Tenant isolation</h2><p>PostgreSQL row-level security migrations and tenant-scoped application patterns exist. End-to-end production isolation testing remains a release gate.</p></article>
+    <article class="card"><span class="status status-roadmap">Roadmap</span><h2 style="margin-top:1rem">Protected originals</h2><p>The target design uses encrypted, versioned object storage and immutable evidence versions. Production object-lock controls are not yet verified.</p></article>
+    <article class="card"><span class="status status-roadmap">Partially implemented</span><h2 style="margin-top:1rem">Scoped external access</h2><p>Contributor grants are designed as high-entropy, hashed, expiring, revocable tokens bound to a narrow purpose. Production hardening remains gated.</p></article>
+    <article class="card"><span class="status status-roadmap">Roadmap</span><h2 style="margin-top:1rem">Safe observability</h2><p>Requirements prohibit evidence text, claim values, access tokens, and signed URLs in ordinary logs. Production monitoring verification is pending.</p></article>
+    <article class="card"><span class="status status-roadmap">Roadmap</span><h2 style="margin-top:1rem">Export and deletion</h2><p>The design covers customer export and deletion across records, object versions, derivatives, queues, indexes, and provider artifacts. Completion testing is pending.</p></article>
+  </div></div></section>
+  <section class="section section-alt"><div class="shell split"><div><p class="eyebrow">Support and disclosure</p><h2>Access should be exceptional, scoped, and accountable.</h2></div><div class="prose"><p>Target support access is approved, reason-bound, time-limited, and audited. It is not a standing path into customer workspaces.</p><p>To report a suspected vulnerability, email <a href={`mailto:${siteConfig.securityEmail}`}>{siteConfig.securityEmail}</a>. Do not include customer evidence or active access tokens in the first message.</p><p>Sub-processors are listed on the <a href="/legal/sub-processors">sub-processors page</a>; binding terms remain owner/counsel work.</p></div></div></section>
+  <CTA title="Bring your technical approver." text="We will walk through the architecture, current implementation boundary, and open production gates." />
+</BaseLayout>

@@ -1,0 +1,42 @@
+---
+import { primaryNav, siteConfig } from '../config'
+import Wordmark from './Wordmark.astro'
+---
+
+<header class="site-header">
+  <div class="shell header-inner">
+    <a class="brand-link" href="/"><Wordmark /></a>
+    <nav class="desktop-nav" aria-label="Primary navigation">
+      {primaryNav.map((item) => <a href={item.href}>{item.label}</a>)}
+    </nav>
+    <div class="header-actions">
+      <button class="theme-toggle" type="button" aria-label="Switch colour theme" title="Switch colour theme">
+        <span aria-hidden="true">◐</span>
+      </button>
+      <a class="text-link sign-in" href={siteConfig.appUrl}>Sign in</a>
+      <a class="button button-small" href={siteConfig.schedulerUrl} data-event="book-sprint">Book a sprint</a>
+      <details class="mobile-menu">
+        <summary>Menu</summary>
+        <nav aria-label="Mobile navigation">
+          {primaryNav.map((item) => <a href={item.href}>{item.label}</a>)}
+          <a href={siteConfig.appUrl}>Sign in</a>
+          <a href={siteConfig.schedulerUrl}>Book a sprint</a>
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>
+
+<script is:inline>
+  (() => {
+    const root = document.documentElement
+    const stored = localStorage.getItem('rre-theme')
+    if (stored === 'light' || stored === 'dark') root.dataset.theme = stored
+    document.querySelector('.theme-toggle')?.addEventListener('click', () => {
+      const current = root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      const next = current === 'dark' ? 'light' : 'dark'
+      root.dataset.theme = next
+      localStorage.setItem('rre-theme', next)
+    })
+  })()
+</script>

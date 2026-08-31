@@ -1,0 +1,67 @@
+---
+import '@rre/brand/brand.css'
+import '../styles/global.css'
+import Footer from '../components/Footer.astro'
+import Header from '../components/Header.astro'
+import { siteConfig } from '../config'
+
+type Props = {
+  title: string
+  description: string
+  image?: string
+  type?: 'website' | 'article'
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[]
+}
+
+const { title, description, image = '/og-default.svg', type = 'website', jsonLd } = Astro.props
+const canonical = new URL(Astro.url.pathname, Astro.site)
+const imageUrl = new URL(image, Astro.site)
+const fullTitle = title === siteConfig.name ? title : `${title} | ${siteConfig.name}`
+const organizationLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: siteConfig.name,
+  url: Astro.site,
+  email: siteConfig.contactEmail,
+}
+const structuredData = jsonLd ? [organizationLd, ...(Array.isArray(jsonLd) ? jsonLd : [jsonLd])] : [organizationLd]
+---
+
+<!doctype html>
+<html lang="en-IE">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#fafafa" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" type="application/rss+xml" title="Deadline briefings" href="/rss.xml" />
+    <meta property="og:type" content={type} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={imageUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imageUrl} />
+    <title>{fullTitle}</title>
+    {structuredData.map((item) => <script is:inline type="application/ld+json" set:html={JSON.stringify(item)} />)}
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <Header />
+    <main id="main-content"><slot /></main>
+    <Footer />
+    {import.meta.env.PUBLIC_ANALYTICS_SRC && import.meta.env.PUBLIC_ANALYTICS_DOMAIN && (
+      <script is:inline defer data-domain={import.meta.env.PUBLIC_ANALYTICS_DOMAIN} src={import.meta.env.PUBLIC_ANALYTICS_SRC}></script>
+    )}
+    <script is:inline>
+      document.addEventListener('click', (event) => {
+        const target = event.target.closest?.('[data-event]')
+        if (target && window.plausible) window.plausible(target.dataset.event, { props: { path: location.pathname } })
+      })
+    </script>
+  </body>
+</html>
