@@ -18,6 +18,7 @@ import {
   type BillingProvider,
 } from './billing/provider.js'
 import type { Plan } from './billing/plans.js'
+import { consoleEmailSender, resendEmailSender, type EmailSender } from './email/sender.js'
 import { headerVerifier, jwtVerifier, type PrincipalVerifier } from './auth/verifier.js'
 import type { ResolveGrant } from './services/requests.js'
 import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
@@ -80,6 +81,18 @@ async function main(): Promise<void> {
     starter: process.env.STRIPE_PRICE_STARTER,
     growth: process.env.STRIPE_PRICE_GROWTH,
   }
+  let emailSender: EmailSender
+  if (process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
+    emailSender = resendEmailSender({
+      apiKey: process.env.RESEND_API_KEY,
+      from: process.env.EMAIL_FROM,
+    })
+    log.info('email', { sender: 'resend' })
+  } else {
+    emailSender = consoleEmailSender((e, m) => log.info(e, m))
+    log.warn('email', { sender: 'console' })
+  }
+
   let billingProvider: BillingProvider
   if (process.env.STRIPE_SECRET_KEY) {
     billingProvider = stripeBillingProvider({
@@ -129,6 +142,7 @@ async function main(): Promise<void> {
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     stripePrices,
     appBaseUrl: process.env.APP_BASE_URL,
+    emailSender,
     devAuth: process.env.DEV_AUTH === '1',
   })
 

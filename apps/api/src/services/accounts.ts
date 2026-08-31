@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto'
 import type { UnitOfWork } from '../db/uow.js'
 import { issueToken, hashToken } from '../tokens.js'
 import { can, roleAtLeast, type Role } from '../rbac.js'
+import type { EmailSender } from '../email/sender.js'
+import { inviteEmail } from '../email/templates.js'
 
 export interface UserRecord {
   id: string
@@ -137,6 +139,8 @@ export class AccountsService {
     private readonly accounts: AccountsRepository,
     private readonly uow: UnitOfWork,
     private readonly billing?: BillingHooks,
+    private readonly email?: EmailSender,
+    private readonly appBaseUrl = 'http://localhost:5173',
   ) {}
 
   private async findOrCreateUser(principal: Principal, now: Date): Promise<UserRecord> {
@@ -285,6 +289,25 @@ export class AccountsService {
         metadata: { role: input.role },
       }),
     )
+
+    if (this.email) {
+      const tenant = await this.accounts.getTenant(tenantId)
+      try {
+        await this.email.send(
+          inviteEmail({
+            to: input.email,
+            workspaceName: tenant?.name ?? 'your workspace',
+            inviterEmail: actor.email,
+            role: input.role,
+            acceptUrl: `${this.appBaseUrl}/join/${issued.token}`,
+            expiresAt: invite.expiresAt,
+          }),
+        )
+      } catch {
+        // best-effort — the invite still stands and the link is returned below
+      }
+    }
+
     return {
       ok: true,
       inviteId: invite.id,

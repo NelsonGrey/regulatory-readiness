@@ -24,6 +24,16 @@ Identity is resolved by a `PrincipalVerifier`: set `AUTH_JWT_ISSUER` +
 tokens from an OIDC provider (Clerk, WorkOS, Auth0, …); otherwise the dev
 stand-in trusts the `x-user-email` header.
 
+## External integrations (all optional, all env-gated)
+
+| Env | Effect |
+| --- | --- |
+| `AUTH_JWT_ISSUER` + `AUTH_JWKS_URI` | Verify real OIDC bearer tokens instead of the `x-user-email` stand-in |
+| `STRIPE_SECRET_KEY` (+ `STRIPE_PRICE_STARTER` / `STRIPE_PRICE_GROWTH`) | Real Stripe checkout / portal instead of the no-op provider |
+| `STRIPE_WEBHOOK_SECRET` | Enables `POST /webhooks/stripe` (503s without it) |
+| `RESEND_API_KEY` + `EMAIL_FROM` | Send invite emails via Resend instead of logging them |
+| `APP_BASE_URL` | Absolute base for links in emails and billing redirects |
+
 ## Routes
 
 | Method + path | Purpose |

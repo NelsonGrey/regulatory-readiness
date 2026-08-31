@@ -24,6 +24,7 @@ import {
   type BillingRepository,
 } from './services/billing.js'
 import { noopBillingProvider, type BillingProvider } from './billing/provider.js'
+import { consoleEmailSender, type EmailSender } from './email/sender.js'
 import { parseStripeEvent, verifyStripeSignature } from './billing/stripe-webhook.js'
 import type { Plan } from './billing/plans.js'
 import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
@@ -80,6 +81,8 @@ export interface BuildAppOptions {
   stripePrices?: Partial<Record<Plan, string>>
   /** Absolute base URL for billing redirect targets. */
   appBaseUrl?: string
+  /** Transactional email. Defaults to a console sender that logs the message. */
+  emailSender?: EmailSender
   /**
    * Dev stand-in for the membership hook: synthesise an `owner` from headers
    * when no real membership exists. Off by default — production refuses a
@@ -110,9 +113,16 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const billingRepo = options.billingRepo ?? new InMemoryBillingRepository()
   const billingProvider = options.billingProvider ?? noopBillingProvider()
   const billingService = new BillingService(billingRepo, billingProvider, accountsRepo, unitOfWork)
-  const accountsService = new AccountsService(accountsRepo, unitOfWork, billingService)
   const verifier = options.principalVerifier ?? headerVerifier()
   const appBaseUrl = options.appBaseUrl ?? process.env.APP_BASE_URL ?? 'http://localhost:5173'
+  const emailSender = options.emailSender ?? consoleEmailSender((e, m) => log.info(e, m))
+  const accountsService = new AccountsService(
+    accountsRepo,
+    unitOfWork,
+    billingService,
+    emailSender,
+    appBaseUrl,
+  )
 
   const app = Fastify({ logger: false })
 
