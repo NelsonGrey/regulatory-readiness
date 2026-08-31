@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactElement } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client.js'
-import type { CreateEntityResponse, PackDetail, PackSummary } from '../api/types.js'
+import type { CreateEntityResponse, PackDetail, PackList, PackSummary } from '../api/types.js'
+import { selectablePacks, packOptionLabel } from './pack-picker.js'
 import { FactField, type FactValue } from '../components/FactField.js'
 
 export function NewEntityPage(): ReactElement {
   const navigate = useNavigate()
 
   const [packs, setPacks] = useState<PackSummary[]>([])
+  const [activationEnforced, setActivationEnforced] = useState(false)
   const [packKey, setPackKey] = useState('')
   const [detail, setDetail] = useState<PackDetail | null>(null)
 
@@ -22,10 +24,18 @@ export function NewEntityPage(): ReactElement {
 
   useEffect(() => {
     api
-      .get<{ packs: PackSummary[] }>('/packs')
-      .then((r) => setPacks(r.packs.filter((p) => p.valid)))
+      .get<PackList>('/packs')
+      .then((r) => {
+        setPacks(r.packs)
+        setActivationEnforced(r.activationEnforced)
+      })
       .catch(() => setPacks([]))
   }, [])
+
+  const options = useMemo(
+    () => selectablePacks(packs, activationEnforced),
+    [packs, activationEnforced],
+  )
 
   useEffect(() => {
     if (!packKey) {
@@ -98,12 +108,19 @@ export function NewEntityPage(): ReactElement {
           <label htmlFor="pack">Regulation (control pack) *</label>
           <select id="pack" value={packKey} onChange={(e) => setPackKey(e.target.value)} required>
             <option value="">Choose a pack…</option>
-            {packs.map((p) => (
+            {options.map((p) => (
               <option key={p.packKey} value={p.packKey}>
-                {p.title ?? p.packKey}
+                {packOptionLabel(p)}
               </option>
             ))}
           </select>
+          {options.length === 0 ? (
+            <p className="rre-note">
+              {activationEnforced
+                ? 'No activated regulations are available yet — an administrator needs to activate one.'
+                : 'No valid control packs are installed.'}
+            </p>
+          ) : null}
         </div>
 
         {detail ? (

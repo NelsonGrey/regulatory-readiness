@@ -160,7 +160,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       })
       const registry = options.packRegistry ?? (await getPackRegistry(packsDir))
       const packGovernance = new PackGovernanceService(packGovernanceRepo, registry)
-      await registerPackRoutes(v1, { registry, governance: packGovernance })
+      await registerPackRoutes(v1, {
+        registry,
+        governance: packGovernance,
+        activationEnforced: options.requirePackActivation ?? false,
+      })
       await registerPackAdminRoutes(v1, {
         governance: packGovernance,
         verifier,

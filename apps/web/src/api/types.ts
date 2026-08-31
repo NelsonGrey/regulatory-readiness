@@ -3,8 +3,14 @@ export interface PackSummary {
   title: string | null
   jurisdiction: string | null
   status: string | null
+  onDiskStatus?: string | null
   snapshotKey: string | null
   valid: boolean
+}
+
+export interface PackList {
+  packs: PackSummary[]
+  activationEnforced: boolean
 }
 
 export interface EntityFact {

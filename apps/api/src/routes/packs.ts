@@ -6,6 +6,8 @@ interface PackRoutesOptions extends FastifyPluginOptions {
   registry: PackRegistry
   /** When present, the reported `status` is the governed (activation-aware) status. */
   governance?: PackGovernanceService
+  /** True when `POST /entities` will refuse a pack that is not governed-`active`. */
+  activationEnforced?: boolean
 }
 
 /**
@@ -18,6 +20,7 @@ export async function registerPackRoutes(
   opts: PackRoutesOptions,
 ): Promise<void> {
   app.get('/packs', async () => ({
+    activationEnforced: opts.activationEnforced ?? false,
     packs: await Promise.all(
       opts.registry.list().map(async (p) => ({
         packKey: p.packKey,

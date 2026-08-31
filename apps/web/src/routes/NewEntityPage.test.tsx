@@ -140,6 +140,65 @@ describe('NewEntityPage', () => {
       await screen.findByText(/fact "offeredToConsumersInIE" is required/i),
     ).toBeInTheDocument()
   })
+
+  it('when activation is enforced, only offers governed-active packs', async () => {
+    mockApi([
+      {
+        path: '/api/v1/packs',
+        method: 'GET',
+        body: {
+          activationEnforced: true,
+          packs: [
+            {
+              packKey: 'eaa-accessibility',
+              title: 'EU Accessibility Act',
+              status: 'active',
+              valid: true,
+            },
+            {
+              packKey: 'eu-battery-passport',
+              title: 'EU Batteries Regulation',
+              status: 'draft',
+              valid: true,
+            },
+          ],
+        },
+      },
+    ])
+
+    renderRoute('/w/entities/new')
+
+    expect(await screen.findByRole('option', { name: 'EU Accessibility Act' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('option', { name: /EU Batteries Regulation/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('badges a draft pack when activation is not enforced', async () => {
+    mockApi([
+      {
+        path: '/api/v1/packs',
+        method: 'GET',
+        body: {
+          activationEnforced: false,
+          packs: [
+            {
+              packKey: 'eu-battery-passport',
+              title: 'EU Batteries Regulation',
+              status: 'draft',
+              valid: true,
+            },
+          ],
+        },
+      },
+    ])
+
+    renderRoute('/w/entities/new')
+
+    expect(
+      await screen.findByRole('option', { name: 'EU Batteries Regulation — draft' }),
+    ).toBeInTheDocument()
+  })
 })
 
 function matrixBody(id: string) {

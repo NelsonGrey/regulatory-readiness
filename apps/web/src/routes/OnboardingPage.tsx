@@ -8,8 +8,10 @@ import type {
   EntityMatrix,
   MatrixRow,
   PackDetail,
+  PackList,
   PackSummary,
 } from '../api/types.js'
+import { packOptionLabel, selectablePacks } from './pack-picker.js'
 
 type Step = 1 | 2 | 3 | 'done'
 
@@ -24,6 +26,7 @@ export function OnboardingPage(): ReactElement {
   const [error, setError] = useState<string | null>(null)
 
   const [packs, setPacks] = useState<PackSummary[]>([])
+  const [activationEnforced, setActivationEnforced] = useState(false)
   const [packKey, setPackKey] = useState('')
   const [detail, setDetail] = useState<PackDetail | null>(null)
 
@@ -42,13 +45,22 @@ export function OnboardingPage(): ReactElement {
   useEffect(() => {
     let live = true
     api
-      .get<{ packs: PackSummary[] }>('/packs')
-      .then((r) => live && setPacks(r.packs.filter((p) => p.valid)))
+      .get<PackList>('/packs')
+      .then((r) => {
+        if (!live) return
+        setPacks(r.packs)
+        setActivationEnforced(r.activationEnforced)
+      })
       .catch(() => live && setPacks([]))
     return () => {
       live = false
     }
   }, [])
+
+  const packChoices = useMemo(
+    () => selectablePacks(packs, activationEnforced),
+    [packs, activationEnforced],
+  )
 
   useEffect(() => {
     if (!packKey) return setDetail(null)
@@ -145,11 +157,15 @@ export function OnboardingPage(): ReactElement {
       {step === 1 ? (
         <div className="rre-panel">
           <h2>Which regulation are you preparing for?</h2>
-          {packs.length === 0 ? (
-            <p>No control packs are installed yet.</p>
+          {packChoices.length === 0 ? (
+            <p>
+              {activationEnforced
+                ? 'No activated regulations are available yet — an administrator needs to activate one.'
+                : 'No control packs are installed yet.'}
+            </p>
           ) : (
             <fieldset className="rre-facts">
-              {packs.map((p) => (
+              {packChoices.map((p) => (
                 <label key={p.packKey} className="rre-choice">
                   <input
                     type="radio"
@@ -159,7 +175,7 @@ export function OnboardingPage(): ReactElement {
                     onChange={() => setPackKey(p.packKey)}
                   />
                   <span>
-                    {p.title ?? p.packKey}
+                    {packOptionLabel(p)}
                     {p.jurisdiction ? ` · ${p.jurisdiction}` : ''}
                   </span>
                 </label>
