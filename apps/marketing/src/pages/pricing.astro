@@ -1,11 +1,45 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro'
 import Limitation from '../components/Limitation.astro'
-import { siteConfig } from '../config'
+import CTA from '../components/CTA.astro'
+import { plans, signUpUrl } from '../config'
 ---
 
-<BaseLayout title="Pricing" description="A transparent, concierge-assisted Regulatory Readiness Sprint: indicative EUR 750–1,500 per entity and regulation.">
-  <header class="page-header"><div class="shell"><p class="eyebrow">Concierge-first pricing</p><h1>Start with a scoped readiness sprint.</h1><p class="lead">One entity, one regulation, and a reviewable outcome—with scope confirmed before work begins.</p><Limitation /></div></header>
-  <section class="section"><div class="shell"><div class="offer"><div><p class="eyebrow">Regulatory Readiness Sprint</p><p class="price">€750–€1,500</p><p>per entity, per regulation</p><p class="fine-print">Indicative range. Final price is confirmed after a scoping call and depends on entity complexity, contributors, and evidence volume.</p><a class="button" href={siteConfig.schedulerUrl} data-event="book-scoping-call">Book a scoping call</a></div><div><h2>What is included</h2><ul class="check-list"><li>Scope and applicability-facts setup</li><li>Evidence request plan for internal and external owners</li><li>Requirement-level readiness matrix</li><li>Missing, conflict, stale, and conditional report</li><li>Dated source-linked export package</li><li>Assisted findings review</li></ul><h3>Not included by default</h3><p>Specialist legal advice, accredited assessment, laboratory work, or specialist metric collection. These need separate qualified providers and scope.</p></div></div></div></section>
-  <section class="section section-alt"><div class="shell card-grid"><article class="card"><h2>Contributors never pay</h2><p>Suppliers and colleagues respond to a scoped request without purchasing a seat.</p></article><article class="card"><h2>No free-trial theatre</h2><p>The first engagement is assisted so the method and deliverables can be validated against real work.</p></article><article class="card"><h2>Subscription later</h2><p>Ongoing subscription options remain roadmap work until paid pilots establish repeatable value.</p></article></div></section>
+<BaseLayout
+  title="Pricing"
+  description="Self-serve plans for Regulatory Readiness: a free 14-day trial, then a flat monthly workspace price. Contributors never pay."
+>
+  <header class="page-header"><div class="shell"><p class="eyebrow">Simple, self-serve pricing</p><h1>Start free. Move to a plan when it earns its place.</h1><p class="lead">A flat price per workspace, per month. Plans differ by how many regulated entities and seats a workspace holds — not by which features you can use.</p><Limitation /></div></header>
+
+  <section class="section"><div class="shell">
+    <div class="plan-grid">
+      {plans.map((plan) => (
+        <article class:list={['plan-card', plan.featured && 'plan-card-featured']}>
+          {plan.featured && <span class="plan-flag">Most teams start here</span>}
+          <h2>{plan.name}</h2>
+          <p class="price">{plan.price}</p>
+          <p class="fine-print">{plan.priceNote}</p>
+          <p class="plan-tagline">{plan.tagline}</p>
+          <ul class="check-list">
+            {plan.limits.map((line) => <li>{line}</li>)}
+          </ul>
+          <a class="button" href={signUpUrl} data-event={`start-${plan.key}`}>{plan.cta}</a>
+        </article>
+      ))}
+    </div>
+    <p class="fine-print" style="margin-top:1.5rem">Every plan includes the full method — applicability, evidence requests, conflict handling, snapshots, and portable export. You upgrade for capacity, not to unlock a feature. Prices shown exclude any applicable VAT.</p>
+  </div></section>
+
+  <section class="section section-alt"><div class="shell card-grid">
+    <article class="card"><h2>Contributors never pay</h2><p>Suppliers and colleagues answer a scoped, expiring request through a link. They never create an account or take a seat.</p></article>
+    <article class="card"><h2>Change plans as you go</h2><p>Move up when a workspace approaches its entity or seat limit; move down when it does not. Billing is handled in-app through Stripe.</p></article>
+    <article class="card"><h2>Your record is portable</h2><p>Every snapshot exports as a dated, source-linked package with hashes. If you leave, the evidence record leaves with you.</p></article>
+  </div></section>
+
+  <section class="section"><div class="shell split">
+    <div><p class="eyebrow">Where the line is</p><h2>What a plan does not include.</h2></div>
+    <div class="prose"><p>Regulatory Readiness organizes your evidence and its review. It does not provide specialist legal advice, accredited conformity assessment, laboratory testing, or specialist metric collection, and it does not decide whether an exception applies to you.</p><p>Those remain the work of qualified providers and your accountable owners. The platform gives them a structured record to work from.</p></div>
+  </div></section>
+
+  <CTA title="Try it against one real entity." text="The 14-day trial is the whole product, capped at three entities and three seats. No card to start." />
 </BaseLayout>

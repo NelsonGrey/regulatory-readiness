@@ -10,6 +10,8 @@ Related: [ENGINE_CONCEPT.md](../ENGINE_CONCEPT.md) · [engine/BUSINESS_REQUIREME
 
 > This document is the brief for the **public, pre-login website** ("the marketing site"). It is deliberately prescriptive about *what the site must say and how it must behave*, and gives a recommended technical shape. The IA, messaging, and guardrails are binding; the framework choice is a strong recommendation with stated alternatives.
 
+> **Superseded, Aug 2026 — commercial model.** The product now ships a full **self-serve SaaS** (self sign-up, plan tiers, Stripe checkout, guided onboarding). The site was rebuilt to match: every primary CTA is **"Start free"** → `/sign-up`; there is **no scheduler and no concierge Regulatory Readiness Sprint**. `/pricing` shows the three self-serve plans (Trial / Starter / Growth) from `apps/marketing/src/config.ts`. Sections below that describe "book a readiness sprint", "concierge-first", "no self-serve signup", or the EUR 750–1,500 sprint range are historical — read them for tone and guardrails, not for the funnel.
+
 ---
 
 ## 1. What the marketing site is — and is not

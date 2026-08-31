@@ -33,6 +33,10 @@ pnpm --filter @rre/marketing test:lighthouse
 
 The copy guard imports the single forbidden-phrase list from `@rre/copy-guard`. Shared light/dark tokens come from `@rre/brand`, which is also consumed by the operator web app.
 
+## Model
+
+The site is **self-serve**: every primary action is "Start free" → `PUBLIC_APP_URL/sign-up`. There is no scheduler and no concierge-sprint funnel. Plan shape and prices live in `src/config.ts` (`plans`) and mirror `apps/api/src/billing/plans.ts`; the owner sets the monthly prices there before launch. This supersedes the concierge-first framing in [`docs/marketing/README.md`](../../docs/marketing/README.md) — see the note at the top of that file.
+
 ## Launch gates
 
-The public name/domain, legal entity/address, binding legal text, scheduler, analytics provider, production AWS resources, and manual keyboard/screen-reader acceptance remain owner or deployment decisions. See [`docs/marketing/DEPLOYMENT.md`](../../docs/marketing/DEPLOYMENT.md).
+The public name/domain, legal entity/address, binding legal text, monthly plan prices (`src/config.ts`), analytics provider, production AWS resources, and manual keyboard/screen-reader acceptance remain owner or deployment decisions. See [`docs/marketing/DEPLOYMENT.md`](../../docs/marketing/DEPLOYMENT.md).

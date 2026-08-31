@@ -1,5 +1,5 @@
 ---
-import { primaryNav, siteConfig } from '../config'
+import { primaryNav, siteConfig, signUpUrl } from '../config'
 import Wordmark from './Wordmark.astro'
 ---
 
@@ -14,13 +14,13 @@ import Wordmark from './Wordmark.astro'
         <span aria-hidden="true">◐</span>
       </button>
       <a class="text-link sign-in" href={siteConfig.appUrl}>Sign in</a>
-      <a class="button button-small" href={siteConfig.schedulerUrl} data-event="book-sprint">Book a sprint</a>
+      <a class="button button-small" href={signUpUrl} data-event="start-free">Start free</a>
       <details class="mobile-menu">
         <summary>Menu</summary>
         <nav aria-label="Mobile navigation">
           {primaryNav.map((item) => <a href={item.href}>{item.label}</a>)}
           <a href={siteConfig.appUrl}>Sign in</a>
-          <a href={siteConfig.schedulerUrl}>Book a sprint</a>
+          <a href={signUpUrl}>Start free</a>
         </nav>
       </details>
     </div>
