@@ -12,6 +12,7 @@ import type { AuthContext } from '../auth.js'
 import type { PackRegistry } from '../pack-registry.js'
 import type { UnitOfWork } from '../db/uow.js'
 import { approvedClaimByControl, claimStateByControl, evidencedClaimIds } from './claims.js'
+import { activeOverrides } from './overrides.js'
 
 export interface SnapshotRecord {
   id: string
@@ -73,9 +74,13 @@ export class SnapshotService {
         evidencedClaimIds(await u.claims.listEvidenceByEntity(entityId)),
       )
       const approved = approvedClaimByControl(claims)
+      const overrides = activeOverrides(await u.overrides.listByEntity(entityId), now)
 
       const readiness = readinessForEntity(
-        evaluation.results.map((r) => ({ control: r.control, applicability: r.result })),
+        evaluation.results.map((r) => ({
+          control: r.control,
+          applicability: overrides.get(r.control)?.result ?? r.result,
+        })),
         claimState,
       )
       const readinessByControl = new Map(readiness.perControl.map((c) => [c.control, c.readiness]))
@@ -83,6 +88,7 @@ export class SnapshotService {
       const controls: ExportControlInput[] = evaluation.results.map((r) => {
         const c = meta.get(r.control)
         const claim = approved.get(r.control) ?? null
+        const ov = overrides.get(r.control) ?? null
         return {
           key: r.control,
           title: c?.title ?? r.control,
@@ -90,8 +96,8 @@ export class SnapshotService {
           standardClause: c?.standardClause ?? null,
           wcagSc: c?.wcagSc ?? null,
           accessClass: c?.accessClassDefault ?? 'PUBLIC_CANDIDATE',
-          applicability: r.result,
-          applicabilityReason: r.reason ?? null,
+          applicability: ov?.result ?? r.result,
+          applicabilityReason: ov ? `overridden: ${ov.rationale}` : (r.reason ?? null),
           readiness: readinessByControl.get(r.control) ?? 'MISSING',
           approvedClaim: claim
             ? {
@@ -101,6 +107,16 @@ export class SnapshotService {
                 origin: claim.origin,
                 asOfDate: claim.asOfDate,
                 assertedAt: claim.assertedAt,
+              }
+            : null,
+          override: ov
+            ? {
+                originalApplicability: r.result,
+                rationale: ov.rationale,
+                sourceRef: ov.sourceRef,
+                by: ov.createdBy,
+                at: ov.createdAt,
+                expiresAt: ov.expiresAt,
               }
             : null,
         }

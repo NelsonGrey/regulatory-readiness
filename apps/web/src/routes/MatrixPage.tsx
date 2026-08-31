@@ -4,6 +4,7 @@ import { ApplicabilityChip, ReadinessChip } from '@rre/ui'
 import { api, ApiError } from '../api/client.js'
 import type { EntityMatrix, MatrixRow } from '../api/types.js'
 import { AddClaimForm } from '../components/AddClaimForm.js'
+import { OverrideForm } from '../components/OverrideForm.js'
 
 const ENTITY_STATUS_LABEL: Record<string, string> = {
   BLOCKED: 'Blocked — required evidence is missing, conflicting, or stale',
@@ -30,6 +31,7 @@ export function MatrixPage(): ReactElement {
   const [status, setStatus] = useState<'loading' | 'ok' | 'notfound' | 'error'>('loading')
   const [readinessFilter, setReadinessFilter] = useState('')
   const [activeControl, setActiveControl] = useState<string | null>(null)
+  const [overrideControl, setOverrideControl] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
 
   const load = useCallback(() => {
@@ -154,6 +156,12 @@ export function MatrixPage(): ReactElement {
               <td>{r.title}</td>
               <td>
                 <ApplicabilityChip result={r.applicability} />
+                {r.originalApplicability ? (
+                  <div className="rre-badge">
+                    overridden from {r.originalApplicability}
+                    {r.overrideRationale ? ` — ${r.overrideRationale}` : ''}
+                  </div>
+                ) : null}
               </td>
               <td>
                 <ReadinessChip state={r.readiness} reason={r.reason} />
@@ -170,15 +178,28 @@ export function MatrixPage(): ReactElement {
                   : '—'}
               </td>
               <td>
-                {r.applicability === 'NOT_APPLICABLE_TO_CLASSIFICATION' ? null : (
+                <div className="rre-actions">
+                  {r.applicability === 'NOT_APPLICABLE_TO_CLASSIFICATION' ? null : (
+                    <button
+                      type="button"
+                      className="rre-secondary"
+                      onClick={() =>
+                        setActiveControl(activeControl === r.control ? null : r.control)
+                      }
+                    >
+                      {activeControl === r.control ? 'Close' : 'Add claim'}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="rre-secondary"
-                    onClick={() => setActiveControl(activeControl === r.control ? null : r.control)}
+                    onClick={() =>
+                      setOverrideControl(overrideControl === r.control ? null : r.control)
+                    }
                   >
-                    {activeControl === r.control ? 'Close' : 'Add claim'}
+                    {overrideControl === r.control ? 'Close' : 'Override'}
                   </button>
-                )}
+                </div>
               </td>
             </tr>
           ))}
@@ -192,6 +213,18 @@ export function MatrixPage(): ReactElement {
           onCancel={() => setActiveControl(null)}
           onDone={() => {
             setActiveControl(null)
+            setVersion((v) => v + 1)
+          }}
+        />
+      ) : null}
+
+      {overrideControl ? (
+        <OverrideForm
+          entityId={id}
+          control={overrideControl}
+          onCancel={() => setOverrideControl(null)}
+          onDone={() => {
+            setOverrideControl(null)
             setVersion((v) => v + 1)
           }}
         />

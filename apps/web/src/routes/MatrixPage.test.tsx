@@ -133,6 +133,63 @@ describe('MatrixPage', () => {
     expect(await screen.findByText(/1 pending/i)).toBeInTheDocument()
   })
 
+  it('marks an overridden control and records a new override through the inline form', async () => {
+    const user = userEvent.setup()
+    const overridden = {
+      ...matrix,
+      rows: matrix.rows.map((r) =>
+        r.control === 'EAA-9-2-1-1'
+          ? {
+              ...r,
+              applicability: 'NOT_APPLICABLE_TO_CLASSIFICATION',
+              readiness: 'NOT_APPLICABLE',
+              originalApplicability: 'REQUIRED_BY_SNAPSHOT',
+              overrideRationale: 'covered by the design system',
+            }
+          : r,
+      ),
+    }
+    let calls = 0
+    const { calls: recorded } = mockApi([
+      {
+        path: '/api/v1/entities/ent_1/matrix',
+        method: 'GET',
+        get body() {
+          return calls++ === 0 ? matrix : overridden
+        },
+      },
+      {
+        path: '/api/v1/entities/ent_1/controls/EAA-9-2-1-1/applicability-override',
+        method: 'POST',
+        status: 201,
+        body: { override: { id: 'aov_1' } },
+      },
+    ])
+
+    renderRoute('/w/entities/ent_1/matrix')
+    const table = await screen.findByRole('table')
+    const kbRow = within(table).getByText('EAA-9-2-1-1').closest('tr')!
+
+    await user.click(within(kbRow).getByRole('button', { name: /^override$/i }))
+    await user.type(screen.getByLabelText(/rationale/i), 'covered by the design system')
+    await user.selectOptions(
+      screen.getByLabelText(/new applicability/i),
+      'NOT_APPLICABLE_TO_CLASSIFICATION',
+    )
+    await user.click(screen.getByRole('button', { name: /record override/i }))
+
+    await waitFor(() => {
+      const post = recorded.find(
+        (c) => c.method === 'POST' && c.url.endsWith('/applicability-override'),
+      )
+      expect(post?.body).toMatchObject({
+        result: 'NOT_APPLICABLE_TO_CLASSIFICATION',
+        rationale: 'covered by the design system',
+      })
+    })
+    expect(await screen.findByText(/overridden from REQUIRED_BY_SNAPSHOT/i)).toBeInTheDocument()
+  })
+
   it('shows a not-found message for an unknown entity', async () => {
     mockApi([
       {

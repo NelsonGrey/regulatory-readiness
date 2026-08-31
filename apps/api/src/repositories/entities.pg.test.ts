@@ -68,7 +68,7 @@ suite('Postgres unit of work + RLS (integration)', () => {
         review_decision, evidence_request, request_item, access_token_grant,
         contributor_submission, contributor_response_item, request_draft, readiness_snapshot,
         notification, document, document_association, evidence_location, claim_evidence_link,
-        extraction_run, extraction_proposal`,
+        extraction_run, extraction_proposal, applicability_override`,
     )
   })
 
@@ -658,6 +658,45 @@ suite('Postgres unit of work + RLS (integration)', () => {
     await expect(
       withTenant(appPool, 't-alpha', (c) => c.query('DELETE FROM extraction_proposal')),
     ).rejects.toThrow(/permission denied/i)
+  })
+
+  it('applicability_override is RLS-scoped and append-only except for revoked_at', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.overrides.insert({
+        id: 'aov_1',
+        tenantId: 't-alpha',
+        entityId: 'ent_1',
+        controlKey: 'C-1',
+        result: 'NOT_APPLICABLE_TO_CLASSIFICATION',
+        rationale: 'covered elsewhere',
+        sourceRef: null,
+        effectiveEvaluationId: 'eval_1',
+        expiresAt: null,
+        createdBy: 'tester',
+        createdAt: AT,
+        revokedAt: null,
+      })
+      await u.overrides.revoke('aov_1', AT)
+    })
+
+    expect(await uow('t-alpha', (u) => u.overrides.get('aov_1'))).toMatchObject({ revokedAt: AT })
+    expect(await uow('t-bravo', (u) => u.overrides.get('aov_1'))).toBeNull()
+    const bravoRows = await withTenant(appPool, 't-bravo', (c) =>
+      c.query('SELECT id FROM applicability_override'),
+    )
+    expect(bravoRows.rows).toEqual([])
+
+    await expect(
+      withTenant(appPool, 't-alpha', (c) =>
+        c.query(`UPDATE applicability_override SET rationale = 'x'`),
+      ),
+    ).rejects.toThrow(/permission denied/i)
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query('DELETE FROM applicability_override')),
+    ).rejects.toThrow(/permission denied/i)
+    await withTenant(appPool, 't-alpha', (c) =>
+      c.query('UPDATE applicability_override SET revoked_at = now() WHERE id = $1', ['aov_1']),
+    )
   })
 
   it('isolates evaluations by pack_key within a tenant', async () => {

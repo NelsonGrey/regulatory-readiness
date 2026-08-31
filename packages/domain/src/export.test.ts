@@ -65,6 +65,38 @@ describe('buildCanonicalExport', () => {
     expect(canonicalJson(a)).toEqual(canonicalJson(b))
   })
 
+  it('surfaces a recorded applicability override at the control and the top level', () => {
+    const doc = buildCanonicalExport(
+      base([
+        control({
+          key: 'C-1',
+          applicability: 'NOT_APPLICABLE_TO_CLASSIFICATION',
+          readiness: 'NOT_APPLICABLE',
+          override: {
+            originalApplicability: 'REQUIRED_BY_SNAPSHOT',
+            rationale: 'covered by a hardware component',
+            sourceRef: 'memo-2026-04',
+            by: 'approver@acme',
+            at: '2026-08-31T00:00:00.000Z',
+            expiresAt: null,
+          },
+        }),
+        control({ key: 'C-2' }),
+      ]),
+    )
+    expect(doc.controls[0]?.override?.originalApplicability).toBe('REQUIRED_BY_SNAPSHOT')
+    expect(doc.overrides).toEqual([
+      expect.objectContaining({
+        control: 'C-1',
+        from: 'REQUIRED_BY_SNAPSHOT',
+        to: 'NOT_APPLICABLE_TO_CLASSIFICATION',
+        rationale: 'covered by a hardware component',
+      }),
+    ])
+    // an overridden-out control is no longer an exception
+    expect(doc.exceptions.some((e) => e.control === 'C-1')).toBe(false)
+  })
+
   it('lists an exception for every required control that is not evidenced', () => {
     const doc = buildCanonicalExport(
       base([

@@ -65,6 +65,23 @@ export const RejectProposalRequest = z.object({
 })
 export type RejectProposalRequest = z.infer<typeof RejectProposalRequest>
 
+/** POST /api/v1/entities/:id/controls/:controlKey/applicability-override (engine TRD §13.3). */
+export const RecordOverrideRequest = z.object({
+  result: z.enum([
+    'REQUIRED_BY_SNAPSHOT',
+    'OPTIONAL_IF_AVAILABLE',
+    'CONDITIONAL_FACT_REQUIRED',
+    'NOT_YET_REQUIRED_BY_SNAPSHOT',
+    'DUPLICATE_SOURCE_FIELD',
+    'NOT_APPLICABLE_TO_CLASSIFICATION',
+    'NEEDS_SPECIALIST_REVIEW',
+  ]),
+  rationale: z.string().min(3).max(4000),
+  sourceRef: z.string().max(1000).optional(),
+  expiresAt: z.string().optional(),
+})
+export type RecordOverrideRequest = z.infer<typeof RecordOverrideRequest>
+
 /** POST /api/v1/entities/:id/requests */
 export const CreateRequestRequest = z.object({
   controlKeys: z.array(z.string().min(1)).min(1),

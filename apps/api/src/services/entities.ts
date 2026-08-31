@@ -17,6 +17,7 @@ import type { AuthContext } from '../auth.js'
 import type { PackRegistry } from '../pack-registry.js'
 import type { UnitOfWork } from '../db/uow.js'
 import { approvedClaimByControl, claimStateByControl, evidencedClaimIds } from './claims.js'
+import { activeOverrides } from './overrides.js'
 
 /** `sha256:<hex>` over the canonical form of a scope evaluation (engine AC-003). */
 function computeEvaluationHash(input: EvaluationDigestInput): string {
@@ -53,6 +54,9 @@ export interface MatrixRow {
   approvedUnit: string | null
   pendingClaims: number
   evidenceCount: number
+  /** The applicability the evaluation produced, when an override is in effect. */
+  originalApplicability: string | null
+  overrideRationale: string | null
 }
 
 export interface EntityMatrix {
@@ -162,13 +166,20 @@ export class EntityService {
     })
   }
 
-  async matrix(auth: AuthContext, id: string): Promise<EntityMatrix | null> {
+  async matrix(
+    auth: AuthContext,
+    id: string,
+    now: Date = new Date(),
+  ): Promise<EntityMatrix | null> {
     return this.uow(auth.tenantId, async (u) => {
       const found = await u.entities.get(id)
       if (!found) return null
 
       const pack = this.packs.get(found.entity.packKey)
       const meta = new Map((pack?.loaded?.controls ?? []).map((c) => [c.key, c]))
+      const overrides = activeOverrides(await u.overrides.listByEntity(id), now)
+      const effective = (control: string, evaluated: string): string =>
+        overrides.get(control)?.result ?? evaluated
 
       const claims = await u.claims.listByEntity(id)
       const evidence = await u.claims.listEvidenceByEntity(id)
@@ -186,8 +197,12 @@ export class EntityService {
         }
       }
 
+      const effectiveResults = found.evaluation.results.map((r) => ({
+        control: r.control,
+        result: effective(r.control, r.result) as (typeof r)['result'],
+      }))
       const readiness = readinessForEntity(
-        found.evaluation.results.map((r) => ({ control: r.control, applicability: r.result })),
+        effectiveResults.map((r) => ({ control: r.control, applicability: r.result })),
         claimState,
       )
       const readinessByControl = new Map(readiness.perControl.map((c) => [c.control, c.readiness]))
@@ -195,6 +210,7 @@ export class EntityService {
       const rows: MatrixRow[] = found.evaluation.results.map((r) => {
         const c = meta.get(r.control)
         const approvedClaim = approved.get(r.control) ?? null
+        const ov = overrides.get(r.control) ?? null
         return {
           control: r.control,
           title: c?.title ?? r.control,
@@ -202,13 +218,15 @@ export class EntityService {
           standardClause: c?.standardClause ?? null,
           wcagSc: c?.wcagSc ?? null,
           accessClassDefault: c?.accessClassDefault ?? 'PUBLIC_CANDIDATE',
-          applicability: r.result,
-          reason: r.reason,
+          applicability: ov?.result ?? r.result,
+          reason: ov ? `overridden: ${ov.rationale}` : r.reason,
           readiness: readinessByControl.get(r.control) ?? 'MISSING',
           approvedValue: approvedClaim?.value ?? null,
           approvedUnit: approvedClaim?.unit ?? null,
           pendingClaims: claimState.get(r.control)?.pending ?? 0,
           evidenceCount: evidenceCountByControl.get(r.control) ?? 0,
+          originalApplicability: ov ? r.result : null,
+          overrideRationale: ov?.rationale ?? null,
         }
       })
 
@@ -221,7 +239,7 @@ export class EntityService {
           hash: found.evaluation.hash,
           version: found.evaluation.version,
         },
-        summary: summariseApplicability(found.evaluation.results),
+        summary: summariseApplicability(effectiveResults),
         entityStatus: readiness.entityStatus,
         readinessCounts: readiness.counts,
         rows,

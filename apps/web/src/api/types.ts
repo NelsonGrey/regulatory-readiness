@@ -54,6 +54,8 @@ export interface MatrixRow {
   approvedUnit: string | null
   pendingClaims: number
   evidenceCount: number
+  originalApplicability: string | null
+  overrideRationale: string | null
 }
 
 export interface EvidenceView {

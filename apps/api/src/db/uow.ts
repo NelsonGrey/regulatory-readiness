@@ -9,6 +9,7 @@ import { PgSnapshotRepository } from '../repositories/snapshots.pg.js'
 import { PgNotificationRepository } from '../repositories/notifications.pg.js'
 import { PgDocumentRepository } from '../repositories/documents.pg.js'
 import { PgExtractionRepository } from '../repositories/extraction.pg.js'
+import { PgOverrideRepository } from '../repositories/overrides.pg.js'
 import type { EntityRepository } from '../services/entities.js'
 import type {
   ClaimEvidenceLinkRecord,
@@ -30,6 +31,7 @@ import type {
   ExtractionRepository,
   ExtractionRunRecord,
 } from '../services/extraction.js'
+import type { ApplicabilityOverrideRecord, OverrideRepository } from '../services/overrides.js'
 import type {
   AccessGrantRecord,
   DraftRecord,
@@ -95,6 +97,7 @@ export interface Uow {
   readonly notifications: NotificationRepository
   readonly documents: DocumentRepository
   readonly extraction: ExtractionRepository
+  readonly overrides: OverrideRepository
   audit(event: AuditInput): Promise<void>
   enqueue(topic: string, payload: unknown): Promise<void>
   queryAudit(query: AuditQuery): Promise<AuditRecord[]>
@@ -116,6 +119,7 @@ export function pgUnitOfWork(pool: Pool): UnitOfWork {
         notifications: new PgNotificationRepository(client, tenantId),
         documents: new PgDocumentRepository(client, tenantId),
         extraction: new PgExtractionRepository(client, tenantId),
+        overrides: new PgOverrideRepository(client, tenantId),
         async audit(ev) {
           await client.query(
             `INSERT INTO audit_event
@@ -226,6 +230,7 @@ export interface InMemoryStores {
   documentAssociations: DocumentAssociationRecord[]
   extractionRuns: ExtractionRunRecord[]
   extractionProposals: ExtractionProposalRecord[]
+  applicabilityOverrides: ApplicabilityOverrideRecord[]
 }
 
 export function createInMemoryStores(): InMemoryStores {
@@ -248,6 +253,7 @@ export function createInMemoryStores(): InMemoryStores {
     documentAssociations: [],
     extractionRuns: [],
     extractionProposals: [],
+    applicabilityOverrides: [],
     responseItems: [],
     drafts: [],
   }
@@ -651,6 +657,33 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       },
     }
 
+    const stagedOverrides: ApplicabilityOverrideRecord[] = []
+    const overrideRevokes = new Map<string, string>()
+    const allOverrides = (): ApplicabilityOverrideRecord[] =>
+      [...stores.applicabilityOverrides, ...stagedOverrides].map((o) => {
+        const at = overrideRevokes.get(o.id)
+        return at ? { ...o, revokedAt: at } : o
+      })
+
+    const overrides: OverrideRepository = {
+      async insert(o) {
+        if (o.tenantId !== tenantId) throw new Error('unit-of-work tenant mismatch')
+        stagedOverrides.push({ ...o })
+      },
+      async get(id) {
+        return allOverrides().find((o) => o.id === id && o.tenantId === tenantId) ?? null
+      },
+      async listByEntity(entityId) {
+        return allOverrides()
+          .filter((o) => o.tenantId === tenantId && o.entityId === entityId)
+          .slice()
+          .reverse()
+      },
+      async revoke(id, at) {
+        overrideRevokes.set(id, at)
+      },
+    }
+
     const entities: EntityRepository = {
       async create(entity, evaluation) {
         if (entity.tenantId !== tenantId || evaluation.tenantId !== tenantId) {
@@ -679,6 +712,7 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       notifications,
       documents,
       extraction,
+      overrides,
       async audit(ev) {
         stagedAudit.push({
           id: `aud_${randomUUID()}`,
@@ -737,6 +771,11 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
     for (const s of stagedSubmissions) stores.submissions.push(s)
     for (const ri of stagedResponseItems) stores.responseItems.push(ri)
     for (const s of stagedSnapshots) stores.snapshots.push(s)
+    for (const o of stagedOverrides) stores.applicabilityOverrides.push(o)
+    for (const [id, at] of overrideRevokes) {
+      const o = stores.applicabilityOverrides.find((x) => x.id === id)
+      if (o) o.revokedAt = at
+    }
     for (const r of stagedRuns) stores.extractionRuns.push(r)
     for (const p of stagedProposals) stores.extractionProposals.push(p)
     for (const [id, patch] of runPatches) {

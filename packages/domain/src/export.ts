@@ -21,6 +21,16 @@ export interface ExportApprovedClaim {
   assertedAt: string
 }
 
+/** A recorded, reasoned change to a control's applicability for this entity (TRD §13.3). */
+export interface ExportOverride {
+  originalApplicability: ApplicabilityResult
+  rationale: string
+  sourceRef: string | null
+  by: string
+  at: string
+  expiresAt: string | null
+}
+
 export interface ExportControlInput {
   key: string
   title: string
@@ -28,10 +38,12 @@ export interface ExportControlInput {
   standardClause: string | null
   wcagSc: string | null
   accessClass: string
+  /** The *effective* applicability — the override result if one is active. */
   applicability: ApplicabilityResult
   applicabilityReason?: string | null
   readiness: ReadinessState
   approvedClaim: ExportApprovedClaim | null
+  override?: ExportOverride | null
 }
 
 export interface PackSourceMetadata {
@@ -119,6 +131,18 @@ export interface CanonicalExportControl {
   applicabilityReason: string | null
   readiness: ReadinessState
   approvedClaim: ExportApprovedClaim | null
+  override: ExportOverride | null
+}
+
+export interface CanonicalExportOverride {
+  control: string
+  from: ApplicabilityResult
+  to: ApplicabilityResult
+  rationale: string
+  sourceRef: string | null
+  by: string
+  at: string
+  expiresAt: string | null
 }
 
 export interface CanonicalExportException {
@@ -149,6 +173,8 @@ export interface CanonicalExport {
   readinessCounts: Record<string, number>
   controls: CanonicalExportControl[]
   exceptions: CanonicalExportException[]
+  /** Recorded applicability overrides in effect for this snapshot. */
+  overrides: CanonicalExportOverride[]
 }
 
 /** Required controls that are not yet evidenced (excluded states never count). */
@@ -178,6 +204,7 @@ export function buildCanonicalExport(input: BuildCanonicalExportInput): Canonica
       applicabilityReason: c.applicabilityReason ?? null,
       readiness: c.readiness,
       approvedClaim: c.approvedClaim,
+      override: c.override ?? null,
     }))
 
   const exceptions: CanonicalExportException[] = controls.filter(isExportException).map((c) => ({
@@ -186,6 +213,19 @@ export function buildCanonicalExport(input: BuildCanonicalExportInput): Canonica
     readiness: c.readiness,
     note: EXCEPTION_NOTE[c.readiness] ?? 'Not yet evidenced.',
   }))
+
+  const overrides: CanonicalExportOverride[] = controls
+    .filter((c) => c.override)
+    .map((c) => ({
+      control: c.key,
+      from: c.override!.originalApplicability,
+      to: c.applicability,
+      rationale: c.override!.rationale,
+      sourceRef: c.override!.sourceRef,
+      by: c.override!.by,
+      at: c.override!.at,
+      expiresAt: c.override!.expiresAt,
+    }))
 
   return {
     schemaVersion: EXPORT_SCHEMA_VERSION,
@@ -208,6 +248,7 @@ export function buildCanonicalExport(input: BuildCanonicalExportInput): Canonica
     readinessCounts: input.readinessCounts,
     controls,
     exceptions,
+    overrides,
   }
 }
 

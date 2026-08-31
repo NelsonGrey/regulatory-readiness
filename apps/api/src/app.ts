@@ -11,6 +11,7 @@ import { SnapshotService } from './services/snapshots.js'
 import { NotificationService } from './services/notifications.js'
 import { DocumentService } from './services/documents.js'
 import { ExtractionService } from './services/extraction.js'
+import { OverrideService } from './services/overrides.js'
 import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerPackRoutes } from './routes/packs.js'
@@ -22,6 +23,7 @@ import { registerSnapshotRoutes } from './routes/snapshots.js'
 import { registerNotificationRoutes } from './routes/notifications.js'
 import { registerDocumentRoutes } from './routes/documents.js'
 import { registerExtractionRoutes } from './routes/extraction.js'
+import { registerOverrideRoutes } from './routes/overrides.js'
 import { registerContributorRoutes } from './routes/contributor.js'
 
 /** Repo `packs/` directory, resolved from this file (works in dev, test, and the bundle). */
@@ -97,6 +99,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       })
       await registerExtractionRoutes(v1, {
         extraction: new ExtractionService(unitOfWork, registry, objectStore),
+      })
+      await registerOverrideRoutes(v1, {
+        overrides: new OverrideService(unitOfWork, registry),
       })
     },
     { prefix: '/api/v1' },
