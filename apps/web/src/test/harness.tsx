@@ -67,7 +67,21 @@ export function mockApi(stubs: RouteStub[]): {
   return { calls }
 }
 
-export function renderRoute(initialPath: string): RenderResult {
+export function renderRoute(
+  initialPath: string,
+  opts: { signedOut?: boolean; tenant?: string } = {},
+): RenderResult {
+  try {
+    if (opts.signedOut) localStorage.removeItem('rre.user')
+    else
+      localStorage.setItem(
+        'rre.user',
+        JSON.stringify({ email: 'operator@local', name: 'Operator' }),
+      )
+    localStorage.setItem('rre.tenant', opts.tenant ?? 'demo-tenant')
+  } catch {
+    /* jsdom always has localStorage; guard anyway */
+  }
   const router = createMemoryRouter(routes, {
     initialEntries: [initialPath],
     future: { v7_relativeSplatPath: true },

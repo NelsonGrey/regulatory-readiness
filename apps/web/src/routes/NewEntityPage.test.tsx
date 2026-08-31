@@ -71,8 +71,10 @@ describe('NewEntityPage', () => {
 
     renderRoute('/w/entities/new')
 
+    // wait for the pack list to populate before selecting
+    await screen.findByRole('option', { name: /EU Accessibility Act/i })
     await user.selectOptions(
-      await screen.findByLabelText(/regulation \(control pack\)/i),
+      screen.getByLabelText(/regulation \(control pack\)/i),
       'eaa-accessibility',
     )
 
@@ -126,7 +128,8 @@ describe('NewEntityPage', () => {
     ])
 
     renderRoute('/w/entities/new')
-    await user.selectOptions(await screen.findByLabelText(/control pack/i), 'eaa-accessibility')
+    await screen.findByRole('option', { name: /EU Accessibility Act/i })
+    await user.selectOptions(screen.getByLabelText(/control pack/i), 'eaa-accessibility')
     await user.type(await screen.findByLabelText(/entity name/i), 'X')
     await user.type(screen.getByLabelText(/entity identifier/i), 'x')
     await user.click(screen.getByRole('button', { name: /create and evaluate/i }))

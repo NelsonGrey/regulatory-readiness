@@ -13,6 +13,8 @@ import { ExtractionReviewPage } from './routes/ExtractionReviewPage.js'
 import { PackImpactPage } from './routes/PackImpactPage.js'
 import { ContributorPortalPage } from './routes/ContributorPortalPage.js'
 import { DeletionPage } from './routes/DeletionPage.js'
+import { MembersPage } from './routes/MembersPage.js'
+import { JoinPage } from './routes/JoinPage.js'
 
 export const routes: RouteObject[] = [
   {
@@ -33,9 +35,12 @@ export const routes: RouteObject[] = [
         element: <ExtractionReviewPage />,
       },
       { path: 'w/notifications', element: <NotificationsPage /> },
+      { path: 'w/settings/members', element: <MembersPage /> },
       { path: 'w/settings/deletion', element: <DeletionPage /> },
     ],
   },
+  // Accept a workspace invite — needs a signed-in person but not a workspace yet.
+  { path: 'join/:token', element: <JoinPage /> },
   // No-account contributor portal — deliberately outside the operator shell.
   { path: 'contribute/:token', element: <ContributorPortalPage /> },
 ]

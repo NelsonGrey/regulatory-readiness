@@ -374,6 +374,58 @@ export interface ExecuteDeletionResponse {
   objectsRemoved: number
 }
 
+export type MemberRole = 'owner' | 'admin' | 'member'
+
+export interface Workspace {
+  id: string
+  name: string
+  slug: string
+  plan: string
+  role: MemberRole
+}
+
+export interface WorkspaceList {
+  workspaces: Workspace[]
+}
+
+export interface CreateWorkspaceResponse {
+  workspace: { id: string; name: string; slug: string; plan: string }
+  role: MemberRole
+}
+
+export interface Member {
+  userId: string
+  email: string
+  name: string | null
+  role: MemberRole
+  createdAt: string
+}
+
+export interface PendingInvite {
+  id: string
+  email: string
+  role: 'admin' | 'member'
+  expiresAt: string
+  createdAt: string
+}
+
+export interface MembersResponse {
+  members: Member[]
+  pendingInvites: PendingInvite[]
+}
+
+export interface InviteResponse {
+  inviteId: string
+  token: string
+  acceptPath: string
+  expiresAt: string
+}
+
+export interface AcceptInviteResponse {
+  workspace: { id: string; name: string }
+  role: MemberRole
+}
+
 export interface EntityMatrix {
   entity: {
     id: string
