@@ -4,6 +4,8 @@ import { api } from '../api/client.js'
 export interface AddClaimFormProps {
   entityId: string
   control: string
+  /** Pack-authored guidance for this control — what good evidence looks like. */
+  evidenceExpectation?: string | null
   onDone: () => void
   onCancel: () => void
 }
@@ -12,6 +14,7 @@ export interface AddClaimFormProps {
 export function AddClaimForm({
   entityId,
   control,
+  evidenceExpectation,
   onDone,
   onCancel,
 }: AddClaimFormProps): ReactElement {
@@ -44,6 +47,11 @@ export function AddClaimForm({
       <h3>
         Add a claim for <code>{control}</code>
       </h3>
+      {evidenceExpectation ? (
+        <p className="rre-note" data-testid="evidence-expectation">
+          <strong>Evidence expected:</strong> {evidenceExpectation}
+        </p>
+      ) : null}
       <p className="rre-note">The claim enters review — it is not treated as approved evidence.</p>
       <div className="rre-field">
         <label htmlFor="claim-value">Value *</label>

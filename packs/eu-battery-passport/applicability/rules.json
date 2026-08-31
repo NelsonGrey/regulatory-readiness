@@ -3,14 +3,6 @@
   "defaultResult": "REQUIRED_BY_SNAPSHOT",
   "rules": [
     {
-      "id": "service-out-of-scope",
-      "description": "A battery passport applies to products, not services.",
-      "when": { "fact": "entityKind", "eq": "service" },
-      "target": "*",
-      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
-      "reason": "The battery passport applies to a product, not a service."
-    },
-    {
       "id": "not-on-eu-market",
       "description": "Battery is not placed on the EU market.",
       "when": { "fact": "placedOnMarketInEU", "eq": false },

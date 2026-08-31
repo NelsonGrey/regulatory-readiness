@@ -13,7 +13,7 @@ export function NewEntityPage(): ReactElement {
 
   const [name, setName] = useState('')
   const [entityIdentifier, setEntityIdentifier] = useState('')
-  const [entityKind, setEntityKind] = useState<'service' | 'product'>('service')
+  const [entityKind, setEntityKind] = useState('product')
   const [facts, setFacts] = useState<Record<string, FactValue>>({})
 
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -40,6 +40,8 @@ export function NewEntityPage(): ReactElement {
         setDetail(d)
         setFacts({})
         setFactErrors({})
+        const kinds = d.entityFacts.find((f) => f.name === 'entityKind')?.enumValues
+        setEntityKind(kinds && kinds.length > 0 ? kinds[0]! : 'product')
       })
       .catch(() => live && setDetail(null))
     return () => {
@@ -123,17 +125,25 @@ export function NewEntityPage(): ReactElement {
                 required
               />
             </div>
-            <div className="rre-field">
-              <label htmlFor="kind">Kind *</label>
-              <select
-                id="kind"
-                value={entityKind}
-                onChange={(e) => setEntityKind(e.target.value as 'service' | 'product')}
-              >
-                <option value="service">service</option>
-                <option value="product">product</option>
-              </select>
-            </div>
+            {(detail.entityFacts.find((f) => f.name === 'entityKind')?.enumValues ?? []).length >
+            1 ? (
+              <div className="rre-field">
+                <label htmlFor="kind">Kind *</label>
+                <select
+                  id="kind"
+                  value={entityKind}
+                  onChange={(e) => setEntityKind(e.target.value)}
+                >
+                  {(detail.entityFacts.find((f) => f.name === 'entityKind')?.enumValues ?? []).map(
+                    (v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </div>
+            ) : null}
 
             <fieldset className="rre-facts">
               <legend>Scope facts</legend>

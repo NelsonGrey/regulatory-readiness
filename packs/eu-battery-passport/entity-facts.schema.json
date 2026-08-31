@@ -4,9 +4,9 @@
     {
       "name": "entityKind",
       "type": "enum",
-      "enumValues": ["product", "service"],
+      "enumValues": ["product"],
       "required": true,
-      "description": "A battery is a product; the service value is treated as out of scope."
+      "description": "A battery is always a product under the Batteries Regulation."
     },
     {
       "name": "placedOnMarketInEU",

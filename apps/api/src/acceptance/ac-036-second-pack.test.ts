@@ -68,10 +68,12 @@ describe('AC-036 — a second, unrelated control pack', () => {
       const detail = await app.inject({ method: 'GET', url: `/api/v1/packs/${PACK}` })
       expect(body(detail).controlCount).toBe(8)
       expect(body(detail).snapshotKey).toBe('BATT-EU-2023-1542-V1-DRAFT')
-      const factNames = (body(detail).entityFacts as Array<{ name: string }>).map((f) => f.name)
-      expect(factNames).toEqual(
+      const facts = body(detail).entityFacts as Array<{ name: string; enumValues?: string[] }>
+      expect(facts.map((f) => f.name)).toEqual(
         expect.arrayContaining(['batteryCategory', 'containsCobaltNickelLithiumLead']),
       )
+      // a battery is always a product — the pack narrows the entityKind enum
+      expect(facts.find((f) => f.name === 'entityKind')?.enumValues).toEqual(['product'])
 
       // an EV battery: carbon-footprint + SoH + due-diligence all required
       const ev = await app.inject({

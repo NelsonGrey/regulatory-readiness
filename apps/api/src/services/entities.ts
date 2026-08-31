@@ -60,6 +60,8 @@ export interface MatrixRow {
   standardClause: string | null
   wcagSc: string | null
   accessClassDefault: string
+  /** Pack-authored guidance: what good evidence for this control looks like. */
+  evidenceExpectation: string | null
   applicability: string
   reason?: string
   readiness: string
@@ -347,6 +349,7 @@ export class EntityService {
           standardClause: c?.standardClause ?? null,
           wcagSc: c?.wcagSc ?? null,
           accessClassDefault: c?.accessClassDefault ?? 'PUBLIC_CANDIDATE',
+          evidenceExpectation: c?.evidenceExpectation ?? null,
           applicability: ov?.result ?? r.result,
           reason: ov ? `overridden: ${ov.rationale}` : r.reason,
           readiness: readinessByControl.get(r.control) ?? 'MISSING',

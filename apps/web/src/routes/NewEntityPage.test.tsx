@@ -83,6 +83,8 @@ describe('NewEntityPage', () => {
     expect(screen.queryByLabelText(/^entityKind/i)).not.toBeInTheDocument()
     await user.type(screen.getByLabelText(/entity name/i), 'Acme Bank')
     await user.type(screen.getByLabelText(/entity identifier/i), 'acme')
+    // the Kind options come from the pack's entityKind fact enum
+    await user.selectOptions(screen.getByLabelText(/^kind/i), 'service')
     await user.selectOptions(offered, 'true')
     await user.selectOptions(screen.getByLabelText(/serviceType/i), 'consumer_banking')
 

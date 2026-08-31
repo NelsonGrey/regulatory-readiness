@@ -47,6 +47,7 @@ export interface MatrixRow {
   standardClause: string | null
   wcagSc: string | null
   accessClassDefault: string
+  evidenceExpectation: string | null
   applicability: string
   reason?: string
   readiness: string

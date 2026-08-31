@@ -53,7 +53,13 @@ const matrix = {
       approvedValue: 'alt text present',
       approvedUnit: null,
     }),
-    row({ control: 'EAA-9-2-1-1', title: 'Keyboard', readiness: 'MISSING' }),
+    row({
+      control: 'EAA-9-2-1-1',
+      title: 'Keyboard',
+      readiness: 'MISSING',
+      evidenceExpectation:
+        'Keyboard-only walkthrough notes for each key flow, with tester and date.',
+    }),
     row({
       control: 'EAA-9-2-4-11',
       title: 'Focus',
@@ -120,6 +126,11 @@ describe('MatrixPage', () => {
     const table = await screen.findByRole('table')
     const keyboardRow = within(table).getByText('EAA-9-2-1-1').closest('tr')!
     await user.click(within(keyboardRow).getByRole('button', { name: /add claim/i }))
+
+    // the claim form shows the pack-authored evidence guidance for this control
+    expect(await screen.findByTestId('evidence-expectation')).toHaveTextContent(
+      /keyboard-only walkthrough notes/i,
+    )
 
     await user.type(screen.getByLabelText(/^value/i), 'keyboard operable')
     await user.click(screen.getByRole('button', { name: /submit for review/i }))

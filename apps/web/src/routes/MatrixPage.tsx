@@ -259,6 +259,9 @@ export function MatrixPage(): ReactElement {
         <AddClaimForm
           entityId={id}
           control={activeControl}
+          evidenceExpectation={
+            matrix.rows.find((r) => r.control === activeControl)?.evidenceExpectation ?? null
+          }
           onCancel={() => setActiveControl(null)}
           onDone={() => {
             setActiveControl(null)

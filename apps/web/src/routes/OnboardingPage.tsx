@@ -29,7 +29,7 @@ export function OnboardingPage(): ReactElement {
 
   const [name, setName] = useState('')
   const [identifier, setIdentifier] = useState('')
-  const [kind, setKind] = useState<'service' | 'product'>('service')
+  const [kind, setKind] = useState('product')
   const [facts, setFacts] = useState<Record<string, FactValue>>({})
   const [factErrors, setFactErrors] = useState<Record<string, string>>({})
 
@@ -55,7 +55,12 @@ export function OnboardingPage(): ReactElement {
     let live = true
     api
       .get<PackDetail>(`/packs/${packKey}`)
-      .then((d) => live && setDetail(d))
+      .then((d) => {
+        if (!live) return
+        setDetail(d)
+        const kinds = d.entityFacts.find((f) => f.name === 'entityKind')?.enumValues
+        setKind(kinds && kinds.length > 0 ? kinds[0]! : 'product')
+      })
       .catch(() => live && setDetail(null))
     return () => {
       live = false
@@ -192,17 +197,21 @@ export function OnboardingPage(): ReactElement {
               required
             />
           </div>
-          <div className="rre-field">
-            <label htmlFor="ob-kind">Kind *</label>
-            <select
-              id="ob-kind"
-              value={kind}
-              onChange={(e) => setKind(e.target.value as 'service' | 'product')}
-            >
-              <option value="service">service</option>
-              <option value="product">product</option>
-            </select>
-          </div>
+          {(detail?.entityFacts.find((f) => f.name === 'entityKind')?.enumValues ?? []).length >
+          1 ? (
+            <div className="rre-field">
+              <label htmlFor="ob-kind">Kind *</label>
+              <select id="ob-kind" value={kind} onChange={(e) => setKind(e.target.value)}>
+                {(detail?.entityFacts.find((f) => f.name === 'entityKind')?.enumValues ?? []).map(
+                  (v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+          ) : null}
           {detail ? (
             <fieldset className="rre-facts">
               <legend>Scope facts</legend>
