@@ -22,6 +22,7 @@ The platform is **one reusable engine** plus a library of **control packs**. Eac
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Local-first dev setup, workspace layout, AWS free-tier reality and cost-control simplifications |
 | [docs/packs/README.md](docs/packs/README.md) | Control-pack registry and the per-pack artifact contract |
 | [docs/packs/espr-dpp-battery/](docs/packs/espr-dpp-battery/) | Origin design, preserved as the first control pack (EU battery passport) |
+| [docs/marketing/README.md](docs/marketing/README.md) | Vision & build-handoff spec for the public marketing site — IA, messaging, language guardrails, tech shape, milestones |
 
 ## Current state
 
