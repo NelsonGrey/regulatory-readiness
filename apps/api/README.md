@@ -35,6 +35,9 @@ stand-in trusts the `x-user-email` header.
 | `POST /api/v1/members/invites`, `GET …`, `POST /api/v1/members/invites/:id/revoke` | Invite a teammate (owner/admin, never an owner; token returned once) / list / withdraw |
 | `POST /api/v1/invites/accept` | Join a workspace with your own verified email (mismatch / expired / revoked / used all refused) |
 | `PATCH /api/v1/members/:userId`, `DELETE /api/v1/members/:userId` | Change a member's role / remove (or leave) — the last owner is protected |
+| `GET /api/v1/billing` | Current plan, status, trial/renewal date, plan limits, and live usage (entities, seats) |
+| `POST /api/v1/billing/checkout`, `POST /api/v1/billing/portal` | Owner-only — a provider redirect URL to upgrade / manage the subscription |
+| `POST /webhooks/stripe` | Raw body, signature-verified, no session — moves `plan` / `status` / `current_period_end` |
 | `GET /api/v1/packs`, `GET /api/v1/packs/:packKey` | Installed control packs + validation status (registry-backed, ADR 0005) |
 | `POST /api/v1/entities` | ENT-001 — create a regulated entity; records scope facts, pack + snapshot, per-control applicability, actor, time, and a reproducibility hash (AC-003) |
 | `GET /api/v1/entities/:id/matrix` | MAT-001 — per-control applicability + readiness, approved value, entity status, honest counts (AC-004) |

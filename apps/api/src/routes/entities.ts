@@ -40,7 +40,9 @@ export async function registerEntityRoutes(
           ? 404
           : result.code === 'INVALID_FACTS' || result.code === 'KIND_MISMATCH'
             ? 422
-            : 409
+            : result.code === 'QUOTA_EXCEEDED'
+              ? 402
+              : 409
       return reply.code(status).send({
         error: {
           code: result.code,

@@ -15,6 +15,7 @@ import { ContributorPortalPage } from './routes/ContributorPortalPage.js'
 import { DeletionPage } from './routes/DeletionPage.js'
 import { MembersPage } from './routes/MembersPage.js'
 import { JoinPage } from './routes/JoinPage.js'
+import { BillingPage } from './routes/BillingPage.js'
 
 export const routes: RouteObject[] = [
   {
@@ -36,6 +37,7 @@ export const routes: RouteObject[] = [
       },
       { path: 'w/notifications', element: <NotificationsPage /> },
       { path: 'w/settings/members', element: <MembersPage /> },
+      { path: 'w/settings/billing', element: <BillingPage /> },
       { path: 'w/settings/deletion', element: <DeletionPage /> },
     ],
   },

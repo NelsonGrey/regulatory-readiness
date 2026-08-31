@@ -224,3 +224,9 @@ export const ChangeRoleRequest = z.object({
   role: MemberRole,
 })
 export type ChangeRoleRequest = z.infer<typeof ChangeRoleRequest>
+
+/** POST /api/v1/billing/checkout — start an upgrade to a paid plan. */
+export const StartCheckoutRequest = z.object({
+  plan: z.enum(['starter', 'growth']),
+})
+export type StartCheckoutRequest = z.infer<typeof StartCheckoutRequest>

@@ -9,7 +9,15 @@ import {
 } from './db/uow.js'
 import { pgResolveGrant } from './repositories/requests.pg.js'
 import { PgAccountsRepository } from './repositories/accounts.pg.js'
+import { PgBillingRepository } from './repositories/billing.pg.js'
 import { InMemoryAccountsRepository, type AccountsRepository } from './services/accounts.js'
+import { InMemoryBillingRepository, type BillingRepository } from './services/billing.js'
+import {
+  noopBillingProvider,
+  stripeBillingProvider,
+  type BillingProvider,
+} from './billing/provider.js'
+import type { Plan } from './billing/plans.js'
 import { headerVerifier, jwtVerifier, type PrincipalVerifier } from './auth/verifier.js'
 import type { ResolveGrant } from './services/requests.js'
 import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
@@ -46,6 +54,7 @@ async function main(): Promise<void> {
   let unitOfWork: UnitOfWork
   let resolveGrant: ResolveGrant | undefined
   let accounts: AccountsRepository
+  let billingRepo: BillingRepository
 
   const databaseUrl = process.env.DATABASE_URL
   if (databaseUrl) {
@@ -57,12 +66,30 @@ async function main(): Promise<void> {
     unitOfWork = pgUnitOfWork(appPool)
     resolveGrant = (hash) => pgResolveGrant(appPool, hash)
     accounts = new PgAccountsRepository(appPool)
+    billingRepo = new PgBillingRepository(appPool)
   } else {
     log.warn('DATABASE_URL not set — using in-memory storage')
     const stores = createInMemoryStores()
     unitOfWork = inMemoryUnitOfWork(stores)
     resolveGrant = async (hash) => stores.grants.find((g) => g.tokenHash === hash) ?? null
     accounts = new InMemoryAccountsRepository()
+    billingRepo = new InMemoryBillingRepository()
+  }
+
+  const stripePrices: Partial<Record<Plan, string>> = {
+    starter: process.env.STRIPE_PRICE_STARTER,
+    growth: process.env.STRIPE_PRICE_GROWTH,
+  }
+  let billingProvider: BillingProvider
+  if (process.env.STRIPE_SECRET_KEY) {
+    billingProvider = stripeBillingProvider({
+      secretKey: process.env.STRIPE_SECRET_KEY,
+      prices: stripePrices,
+    })
+    log.info('billing', { provider: 'stripe' })
+  } else {
+    billingProvider = noopBillingProvider()
+    log.warn('billing', { provider: 'noop' })
   }
 
   const objectStore = buildObjectStore()
@@ -97,6 +124,11 @@ async function main(): Promise<void> {
     maxDocumentBytes,
     accounts,
     principalVerifier,
+    billingRepo,
+    billingProvider,
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    stripePrices,
+    appBaseUrl: process.env.APP_BASE_URL,
     devAuth: process.env.DEV_AUTH === '1',
   })
 

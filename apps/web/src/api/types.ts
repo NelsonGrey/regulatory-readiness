@@ -426,6 +426,19 @@ export interface AcceptInviteResponse {
   role: MemberRole
 }
 
+export interface BillingSummary {
+  plan: 'trial' | 'starter' | 'growth'
+  status: 'trialing' | 'active' | 'past_due' | 'canceled'
+  trialEndsAt: string | null
+  currentPeriodEnd: string | null
+  limits: { entities: number | null; seats: number | null }
+  usage: { entities: number; seats: number }
+}
+
+export interface CheckoutResponse {
+  url: string
+}
+
 export interface EntityMatrix {
   entity: {
     id: string

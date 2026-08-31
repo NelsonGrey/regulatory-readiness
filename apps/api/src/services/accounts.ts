@@ -104,7 +104,13 @@ export interface WorkspaceCreated {
 
 export type InviteResult =
   | { ok: true; inviteId: string; token: string; acceptPath: string; expiresAt: string }
-  | Fail<'FORBIDDEN' | 'ALREADY_MEMBER'>
+  | Fail<'FORBIDDEN' | 'ALREADY_MEMBER' | 'SEAT_LIMIT'>
+
+/** The billing hooks AccountsService uses — `BillingService` satisfies this. */
+export interface BillingHooks {
+  ensureTrial(tenantId: string, now?: Date): Promise<void>
+  assertCanAdd(tenantId: string, resource: 'seats'): Promise<{ ok: boolean; message?: string }>
+}
 
 export type AcceptResult =
   | { ok: true; tenant: TenantRecord; role: Role }
@@ -130,6 +136,7 @@ export class AccountsService {
   constructor(
     private readonly accounts: AccountsRepository,
     private readonly uow: UnitOfWork,
+    private readonly billing?: BillingHooks,
   ) {}
 
   private async findOrCreateUser(principal: Principal, now: Date): Promise<UserRecord> {
@@ -184,6 +191,7 @@ export class AccountsService {
         metadata: { slug: tenant.slug },
       }),
     )
+    await this.billing?.ensureTrial(tenant.id, now)
     return { tenant, membership }
   }
 
@@ -244,6 +252,11 @@ export class AccountsService {
     const invitee = await this.accounts.findUserByEmail(input.email)
     if (invitee && (await this.accounts.getMembership(tenantId, invitee.id))) {
       return { ok: false, code: 'ALREADY_MEMBER', message: 'that person is already a member' }
+    }
+    if (this.billing) {
+      const q = await this.billing.assertCanAdd(tenantId, 'seats')
+      if (!q.ok)
+        return { ok: false, code: 'SEAT_LIMIT', message: q.message ?? 'seat limit reached' }
     }
     const issued = issueToken()
     const invite: InviteRecord = {

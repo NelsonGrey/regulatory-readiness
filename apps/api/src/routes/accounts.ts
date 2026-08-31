@@ -137,7 +137,7 @@ export async function registerAccountRoutes(
       parsed.data,
     )
     if (!res.ok) {
-      const code = res.code === 'FORBIDDEN' ? 403 : 409
+      const code = res.code === 'FORBIDDEN' ? 403 : res.code === 'SEAT_LIMIT' ? 402 : 409
       return reply.code(code).send({ error: { code: res.code, message: res.message } })
     }
     return reply.code(201).send({

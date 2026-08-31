@@ -18,6 +18,14 @@ import {
   InMemoryAccountsRepository,
   type AccountsRepository,
 } from './services/accounts.js'
+import {
+  BillingService,
+  InMemoryBillingRepository,
+  type BillingRepository,
+} from './services/billing.js'
+import { noopBillingProvider, type BillingProvider } from './billing/provider.js'
+import { parseStripeEvent, verifyStripeSignature } from './billing/stripe-webhook.js'
+import type { Plan } from './billing/plans.js'
 import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
 import { registerWorkspaceAuth } from './auth-hook.js'
 import { headerVerifier, type PrincipalVerifier } from './auth/verifier.js'
@@ -33,6 +41,7 @@ import { registerDocumentRoutes } from './routes/documents.js'
 import { registerExtractionRoutes } from './routes/extraction.js'
 import { registerOverrideRoutes } from './routes/overrides.js'
 import { registerTenantAdminRoutes } from './routes/tenant-admin.js'
+import { registerBillingRoutes } from './routes/billing.js'
 import { registerAccountRoutes } from './routes/accounts.js'
 import { registerContributorRoutes } from './routes/contributor.js'
 
@@ -61,6 +70,16 @@ export interface BuildAppOptions {
   accounts?: AccountsRepository
   /** Resolves the signed-in person. Defaults to the `x-user-email` header stand-in. */
   principalVerifier?: PrincipalVerifier
+  /** Subscription store. Defaults to in-memory. */
+  billingRepo?: BillingRepository
+  /** Billing back-end. Defaults to a no-op (checkout returns to the billing page). */
+  billingProvider?: BillingProvider
+  /** Verifies the Stripe webhook signature; when unset the webhook 503s. */
+  stripeWebhookSecret?: string
+  /** Stripe price id → plan, for `customer.subscription.updated`. */
+  stripePrices?: Partial<Record<Plan, string>>
+  /** Absolute base URL for billing redirect targets. */
+  appBaseUrl?: string
   /**
    * Dev stand-in for the membership hook: synthesise an `owner` from headers
    * when no real membership exists. Off by default — production refuses a
@@ -88,8 +107,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const resolve: ResolveGrant = resolveGrant ?? (async () => null)
   const objectStore = options.objectStore ?? createLocalObjectStore()
   const accountsRepo = options.accounts ?? new InMemoryAccountsRepository()
-  const accountsService = new AccountsService(accountsRepo, unitOfWork)
+  const billingRepo = options.billingRepo ?? new InMemoryBillingRepository()
+  const billingProvider = options.billingProvider ?? noopBillingProvider()
+  const billingService = new BillingService(billingRepo, billingProvider, accountsRepo, unitOfWork)
+  const accountsService = new AccountsService(accountsRepo, unitOfWork, billingService)
   const verifier = options.principalVerifier ?? headerVerifier()
+  const appBaseUrl = options.appBaseUrl ?? process.env.APP_BASE_URL ?? 'http://localhost:5173'
 
   const app = Fastify({ logger: false })
 
@@ -113,7 +136,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       })
       const registry = options.packRegistry ?? (await getPackRegistry(packsDir))
       await registerPackRoutes(v1, { registry })
-      await registerEntityRoutes(v1, { entities: new EntityService(unitOfWork, registry) })
+      await registerEntityRoutes(v1, {
+        entities: new EntityService(unitOfWork, registry, billingService),
+      })
       await registerAuditRoutes(v1, { audit: new AuditService(unitOfWork) })
       await registerClaimRoutes(v1, { claims: new ClaimService(unitOfWork, registry) })
       await registerRequestRoutes(v1, { requests: new RequestService(unitOfWork, registry) })
@@ -135,8 +160,34 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         tenantAdmin: new TenantAdminService(unitOfWork, objectStore),
       })
       await registerAccountRoutes(v1, { accounts: accountsService, verifier })
+      await registerBillingRoutes(v1, { billing: billingService, appBaseUrl })
     },
     { prefix: '/api/v1' },
+  )
+
+  // Billing provider webhooks — raw body, signature-verified, no session.
+  app.register(
+    async (wh) => {
+      wh.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) =>
+        done(null, body),
+      )
+      wh.post('/stripe', async (req, reply) => {
+        const secret = options.stripeWebhookSecret
+        if (!secret) return reply.code(503).send({ error: { code: 'NO_WEBHOOK_SECRET' } })
+        const raw = typeof req.body === 'string' ? req.body : ''
+        const sig = req.headers['stripe-signature']
+        if (!verifyStripeSignature(raw, Array.isArray(sig) ? sig[0] : sig, secret)) {
+          return reply.code(400).send({ error: { code: 'BAD_SIGNATURE' } })
+        }
+        const prices = options.stripePrices ?? {}
+        const priceToPlan = (id: string): Plan | undefined =>
+          (Object.entries(prices).find(([, v]) => v === id)?.[0] as Plan | undefined) ?? undefined
+        const event = parseStripeEvent(raw, priceToPlan)
+        if (event) await billingService.applyEvent(event)
+        return { received: true }
+      })
+    },
+    { prefix: '/webhooks' },
   )
 
   app.register(

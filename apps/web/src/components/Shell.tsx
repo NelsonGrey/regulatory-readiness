@@ -150,6 +150,7 @@ export function Shell(): ReactElement {
               {unread ? <span className="rre-badge-count"> {unread}</span> : null}
             </Link>
             <Link to="/w/settings/members">Team</Link>
+            <Link to="/w/settings/billing">Billing</Link>
             <Link to="/w/settings/deletion">Data &amp; deletion</Link>
           </nav>
         </div>

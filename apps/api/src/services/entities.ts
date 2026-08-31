@@ -42,6 +42,12 @@ export type CreateEntityFailure =
   | { code: 'PACK_NOT_LOADED'; message: string }
   | { code: 'KIND_MISMATCH'; message: string }
   | { code: 'INVALID_FACTS'; message: string; issues: FactIssue[] }
+  | { code: 'QUOTA_EXCEEDED'; message: string }
+
+/** The billing check EntityService uses — `BillingService` satisfies this. */
+export interface EntityQuota {
+  assertCanAdd(tenantId: string, resource: 'entities'): Promise<{ ok: boolean; message?: string }>
+}
 
 export type CreateEntityResult =
   | { ok: true; entity: RegulatedEntity; evaluation: EntityScopeEvaluation }
@@ -79,6 +85,7 @@ export class EntityService {
   constructor(
     private readonly uow: UnitOfWork,
     private readonly packs: PackRegistry,
+    private readonly quota?: EntityQuota,
   ) {}
 
   async create(
@@ -105,6 +112,13 @@ export class EntityService {
     const issues = validateEntityFacts(pack.loaded.entityFacts, facts)
     if (issues.length > 0) {
       return { ok: false, code: 'INVALID_FACTS', message: 'entity facts are invalid', issues }
+    }
+
+    if (this.quota) {
+      const q = await this.quota.assertCanAdd(auth.tenantId, 'entities')
+      if (!q.ok) {
+        return { ok: false, code: 'QUOTA_EXCEEDED', message: q.message ?? 'entity limit reached' }
+      }
     }
 
     const snapshotKey = pack.loaded.manifest.snapshotKey
