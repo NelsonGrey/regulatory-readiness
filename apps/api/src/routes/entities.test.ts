@@ -170,10 +170,19 @@ describe('POST /api/v1/entities + matrix', () => {
     })
     expect(res.statusCode).toBe(200)
     const { entities } = res.json() as {
-      entities: Array<{ name: string; packKey: string; snapshotKey: string }>
+      entities: Array<{
+        name: string
+        packKey: string
+        snapshotKey: string
+        entityStatus: string
+        readinessCounts: Record<string, number>
+      }>
     }
     expect(entities.map((e) => e.name).sort()).toEqual(['Acme first', 'Acme second'])
     expect(entities.every((e) => e.packKey === 'eaa-accessibility')).toBe(true)
     expect(entities.every((e) => e.snapshotKey === 'EAA-IE-EN549-V3.2.1-DRAFT')).toBe(true)
+    // no claims yet → required controls MISSING → BLOCKED
+    expect(entities.every((e) => e.entityStatus === 'BLOCKED')).toBe(true)
+    expect(entities[0]!.readinessCounts.MISSING).toBeGreaterThan(0)
   })
 })

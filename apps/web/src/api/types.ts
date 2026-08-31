@@ -435,6 +435,8 @@ export interface EntitySummary {
   createdAt: string
   snapshotKey: string
   evaluationVersion: number
+  entityStatus: EntityStatus
+  readinessCounts: ReadinessCounts
 }
 
 export interface EntityList {

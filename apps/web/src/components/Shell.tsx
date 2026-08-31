@@ -143,7 +143,8 @@ export function Shell(): ReactElement {
             Regulatory Readiness Engine
           </Link>
           <nav className="rre-nav">
-            <Link to="/">Packs</Link>
+            <Link to="/">Dashboard</Link>
+            <Link to="/w/packs">Packs</Link>
             <Link to="/w/entities/new">New entity</Link>
             <Link to="/w/notifications">
               Notifications

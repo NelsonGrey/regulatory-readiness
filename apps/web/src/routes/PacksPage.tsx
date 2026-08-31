@@ -1,11 +1,10 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client.js'
-import type { EntityList, PackSummary } from '../api/types.js'
+import type { PackSummary } from '../api/types.js'
 
 export function PacksPage(): ReactElement {
   const [packs, setPacks] = useState<PackSummary[] | null>(null)
-  const [entityCount, setEntityCount] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -14,10 +13,6 @@ export function PacksPage(): ReactElement {
       .get<{ packs: PackSummary[] }>('/packs')
       .then((r) => live && setPacks(r.packs))
       .catch((e: unknown) => live && setError(e instanceof Error ? e.message : 'Failed to load'))
-    api
-      .get<EntityList>('/entities')
-      .then((r) => live && setEntityCount(r.entities.length))
-      .catch(() => live && setEntityCount(null))
     return () => {
       live = false
     }
@@ -29,24 +24,9 @@ export function PacksPage(): ReactElement {
   return (
     <section>
       <h1>Control packs</h1>
-
-      {entityCount === 0 ? (
-        <div className="rre-panel" data-testid="onboarding-cta">
-          <h2>New here?</h2>
-          <p>
-            Set up your workspace in three quick steps — pick a regulation, add your first product
-            or service, and send an evidence request.
-          </p>
-          <Link className="rre-primary" to="/w/onboarding">
-            Get started →
-          </Link>
-        </div>
-      ) : (
-        <p>
-          <Link to="/w/entities/new">Create a regulated entity →</Link>
-        </p>
-      )}
-
+      <p>
+        <Link to="/w/entities/new">Create a regulated entity →</Link>
+      </p>
       {packs.length === 0 ? (
         <p>No control packs are installed.</p>
       ) : (

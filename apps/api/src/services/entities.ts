@@ -431,21 +431,43 @@ export class EntityService {
     })
   }
 
-  /** Every entity in the workspace with its current evaluation (newest first). */
-  async list(auth: AuthContext): Promise<EntitySummary[]> {
-    const rows = await this.uow(auth.tenantId, (u) => u.entities.list())
-    return rows
-      .map(({ entity, evaluation }) => ({
-        id: entity.id,
-        name: entity.name,
-        entityIdentifier: entity.entityIdentifier,
-        packKey: entity.packKey,
-        entityKind: entity.entityKind,
-        createdAt: entity.createdAt,
-        snapshotKey: evaluation.snapshotKey,
-        evaluationVersion: evaluation.version,
-      }))
-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
+  /**
+   * Every entity in the workspace with its current evaluation and readiness
+   * roll-up (newest first) — the dashboard view (engine TRD §7.1).
+   */
+  async list(auth: AuthContext, now: Date = new Date()): Promise<EntitySummary[]> {
+    return this.uow(auth.tenantId, async (u) => {
+      const rows = await u.entities.list()
+      const out: EntitySummary[] = []
+      for (const { entity, evaluation } of rows) {
+        const overrides = activeOverrides(await u.overrides.listByEntity(entity.id), now)
+        const claims = await u.claims.listByEntity(entity.id)
+        const evidence = await u.claims.listEvidenceByEntity(entity.id)
+        const claimState = claimStateByControl(claims, evidencedClaimIds(evidence))
+        const readiness = readinessForEntity(
+          evaluation.results.map((r) => ({
+            control: r.control,
+            applicability: overrides.get(r.control)?.result ?? r.result,
+          })),
+          claimState,
+        )
+        out.push({
+          id: entity.id,
+          name: entity.name,
+          entityIdentifier: entity.entityIdentifier,
+          packKey: entity.packKey,
+          entityKind: entity.entityKind,
+          createdAt: entity.createdAt,
+          snapshotKey: evaluation.snapshotKey,
+          evaluationVersion: evaluation.version,
+          entityStatus: readiness.entityStatus,
+          readinessCounts: readiness.counts,
+        })
+      }
+      return out.sort((a, b) =>
+        a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0,
+      )
+    })
   }
 }
 
@@ -458,6 +480,8 @@ export interface EntitySummary {
   createdAt: string
   snapshotKey: string
   evaluationVersion: number
+  entityStatus: EntityStatus
+  readinessCounts: ReadinessCounts
 }
 
 export interface ImpactedEntity {
