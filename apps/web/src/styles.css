@@ -294,7 +294,8 @@ button:disabled {
   border-color: #a8d3a8;
   color: #275e27;
 }
-.rre-readiness-chip[data-state='PENDING_REVIEW'] {
+.rre-readiness-chip[data-state='PENDING_REVIEW'],
+.rre-readiness-chip[data-state='SELF_ATTESTED'] {
   background: #fdf3e3;
   border-color: #e6c893;
   color: #7a5300;

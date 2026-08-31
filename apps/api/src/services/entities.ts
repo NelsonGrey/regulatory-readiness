@@ -16,7 +16,7 @@ import {
 import type { AuthContext } from '../auth.js'
 import type { PackRegistry } from '../pack-registry.js'
 import type { UnitOfWork } from '../db/uow.js'
-import { approvedClaimByControl, claimStateByControl } from './claims.js'
+import { approvedClaimByControl, claimStateByControl, evidencedClaimIds } from './claims.js'
 
 /** `sha256:<hex>` over the canonical form of a scope evaluation (engine AC-003). */
 function computeEvaluationHash(input: EvaluationDigestInput): string {
@@ -52,6 +52,7 @@ export interface MatrixRow {
   approvedValue: string | null
   approvedUnit: string | null
   pendingClaims: number
+  evidenceCount: number
 }
 
 export interface EntityMatrix {
@@ -170,8 +171,20 @@ export class EntityService {
       const meta = new Map((pack?.loaded?.controls ?? []).map((c) => [c.key, c]))
 
       const claims = await u.claims.listByEntity(id)
-      const claimState = claimStateByControl(claims)
+      const evidence = await u.claims.listEvidenceByEntity(id)
+      const evidencedIds = evidencedClaimIds(evidence)
+      const claimState = claimStateByControl(claims, evidencedIds)
       const approved = approvedClaimByControl(claims)
+      const evidenceCountByControl = new Map<string, number>()
+      for (const e of evidence) {
+        const claim = claims.find((c) => c.id === e.claimId)
+        if (claim) {
+          evidenceCountByControl.set(
+            claim.controlKey,
+            (evidenceCountByControl.get(claim.controlKey) ?? 0) + 1,
+          )
+        }
+      }
 
       const readiness = readinessForEntity(
         found.evaluation.results.map((r) => ({ control: r.control, applicability: r.result })),
@@ -195,6 +208,7 @@ export class EntityService {
           approvedValue: approvedClaim?.value ?? null,
           approvedUnit: approvedClaim?.unit ?? null,
           pendingClaims: claimState.get(r.control)?.pending ?? 0,
+          evidenceCount: evidenceCountByControl.get(r.control) ?? 0,
         }
       })
 

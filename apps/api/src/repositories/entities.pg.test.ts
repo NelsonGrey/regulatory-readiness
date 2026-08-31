@@ -67,7 +67,7 @@ suite('Postgres unit of work + RLS (integration)', () => {
       `TRUNCATE regulated_entity, entity_scope_evaluation, audit_event, outbox, claim,
         review_decision, evidence_request, request_item, access_token_grant,
         contributor_submission, contributor_response_item, request_draft, readiness_snapshot,
-        notification, document, document_association`,
+        notification, document, document_association, evidence_location, claim_evidence_link`,
     )
   })
 
@@ -493,6 +493,96 @@ suite('Postgres unit of work + RLS (integration)', () => {
     await withTenant(appPool, 't-alpha', (c) =>
       c.query(`UPDATE document SET status = 'DELETED_PENDING_PURGE' WHERE id = 'doc_1'`),
     )
+  })
+
+  it('evidence links are RLS-scoped and append-only; an approved claim with one reads as evidenced', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'ee'), makeEvaluation('t-alpha', 'ee'))
+      await u.claims.insert({
+        id: 'clm_e',
+        tenantId: 't-alpha',
+        entityId: 'ee',
+        controlKey: 'C-1',
+        packKey: 'eaa-accessibility',
+        origin: 'INTERNAL_ASSERTION',
+        revision: 1,
+        supersedesClaimId: null,
+        status: 'APPROVED',
+        value: 'v',
+        unit: null,
+        methodContext: null,
+        asOfDate: null,
+        note: null,
+        evidenceUrl: null,
+        assertedBy: 'tester',
+        assertedAt: AT,
+      })
+      await u.documents.insert({
+        id: 'doc_e',
+        tenantId: 't-alpha',
+        filename: 'e.pdf',
+        mediaType: 'application/pdf',
+        sizeBytes: 10,
+        uploadKey: 'quarantine/t-alpha/doc_e',
+        objectKey: 'originals/t-alpha/doc_e',
+        contentHash: 'sha256:beef',
+        accessClass: 'INTERNAL_CONFIDENTIAL',
+        status: 'AVAILABLE',
+        scanNote: null,
+        ingestedBy: 'tester',
+        createdAt: AT,
+        availableAt: AT,
+      })
+      await u.claims.linkEvidence(
+        {
+          id: 'evl_e',
+          tenantId: 't-alpha',
+          documentId: 'doc_e',
+          page: 3,
+          sheet: null,
+          cell: null,
+          bbox: null,
+          quote: 'here',
+          locationHash: 'sha256:loc',
+          createdBy: 'tester',
+          createdAt: AT,
+        },
+        {
+          id: 'cel_e',
+          tenantId: 't-alpha',
+          claimId: 'clm_e',
+          evidenceLocationId: 'evl_e',
+          supportType: 'SUPPORTS',
+          addedBy: 'tester',
+          createdAt: AT,
+        },
+      )
+    })
+
+    const byEntity = await uow('t-alpha', (u) => u.claims.listEvidenceByEntity('ee'))
+    expect(byEntity).toEqual([
+      expect.objectContaining({
+        claimId: 'clm_e',
+        documentId: 'doc_e',
+        documentFilename: 'e.pdf',
+        page: 3,
+      }),
+    ])
+
+    expect(await uow('t-bravo', (u) => u.claims.listEvidenceByClaim('clm_e'))).toEqual([])
+    const bravoRows = await withTenant(appPool, 't-bravo', (c) =>
+      c.query('SELECT id FROM claim_evidence_link'),
+    )
+    expect(bravoRows.rows).toEqual([])
+
+    await expect(
+      withTenant(appPool, 't-alpha', (c) =>
+        c.query(`UPDATE claim_evidence_link SET support_type = 'CONTEXT'`),
+      ),
+    ).rejects.toThrow(/permission denied/i)
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query('DELETE FROM evidence_location')),
+    ).rejects.toThrow(/permission denied/i)
   })
 
   it('isolates evaluations by pack_key within a tenant', async () => {

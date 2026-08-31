@@ -5,6 +5,7 @@
 
 export const READINESS_STATES = [
   'EVIDENCED',
+  'SELF_ATTESTED',
   'MISSING',
   'CONFLICTING',
   'STALE',
@@ -49,8 +50,8 @@ export interface DeriveEntityStatusOptions {
  *
  * Precedence (engine BRD §10.2):
  *   1. BLOCKED         — any required control is MISSING | CONFLICTING | STALE | CONDITIONAL
- *   2. REVIEW_NEEDED   — no blocker, but any required control is PENDING_REVIEW
- *   3. EVIDENCE_READY  — every required control is EVIDENCED
+ *   2. REVIEW_NEEDED   — no blocker, but any required control is PENDING_REVIEW or SELF_ATTESTED
+ *   3. EVIDENCE_READY  — every required control is EVIDENCED (a document backs each approved claim)
  *   OUTDATED_SNAPSHOT overrides only a non-blocked result, so real blockers stay visible.
  */
 export function deriveEntityStatus(
@@ -61,7 +62,7 @@ export function deriveEntityStatus(
 
   if (BLOCKING_STATES.some(has)) return 'BLOCKED'
   if (options.newerSnapshotPendingReview) return 'OUTDATED_SNAPSHOT'
-  if (has('PENDING_REVIEW')) return 'REVIEW_NEEDED'
+  if (has('PENDING_REVIEW') || has('SELF_ATTESTED')) return 'REVIEW_NEEDED'
   if (requiredControlStates.every((s) => s === 'EVIDENCED')) return 'EVIDENCE_READY'
 
   // Any remaining combination (e.g. a stray NOT_APPLICABLE passed in) is not ready.

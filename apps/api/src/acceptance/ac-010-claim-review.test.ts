@@ -92,7 +92,8 @@ describe('AC-010 — human claim decision', () => {
           rows: Array<{ control: string; readiness: string; approvedValue: string | null }>
         }
       ).rows.find((r) => r.control === CONTROL)
-      expect(afterRow?.readiness).toBe('EVIDENCED')
+      // approved, but no supporting document yet
+      expect(afterRow?.readiness).toBe('SELF_ATTESTED')
       expect(afterRow?.approvedValue).toBe('keyboard operable')
 
       const audit = await app.inject({ method: 'GET', url: '/api/v1/audit-events', headers })
@@ -101,6 +102,56 @@ describe('AC-010 — human claim decision', () => {
       )
       expect(actions).toContain('claim.asserted')
       expect(actions).toContain('claim.reviewed')
+    })
+  })
+
+  it('a self-attested control becomes EVIDENCED once a supporting document is linked', async () => {
+    await withApp(async (app) => {
+      const id = await createEntity(app)
+      const claimId = (
+        (await assert(app, id, 'keyboard operable')).json() as {
+          claim: { id: string }
+        }
+      ).claim.id
+      await decide(app, claimId, { decision: 'APPROVED' })
+
+      const readiness = async (): Promise<string | undefined> => {
+        const m = await app.inject({ method: 'GET', url: `/api/v1/entities/${id}/matrix`, headers })
+        return (m.json() as { rows: Array<{ control: string; readiness: string }> }).rows.find(
+          (r) => r.control === CONTROL,
+        )?.readiness
+      }
+      expect(await readiness()).toBe('SELF_ATTESTED')
+
+      // upload a document
+      const started = await app.inject({
+        method: 'POST',
+        url: '/api/v1/documents',
+        headers,
+        payload: {
+          filename: 'audit.pdf',
+          mediaType: 'application/pdf',
+          sizeBytes: 12,
+          entityId: id,
+        },
+      })
+      const { documentId, uploadUrl } = started.json() as { documentId: string; uploadUrl: string }
+      await app.inject({
+        method: 'PUT',
+        url: uploadUrl,
+        headers: { ...headers, 'content-type': 'application/octet-stream' },
+        payload: Buffer.from('%PDF-1.4 xyz'),
+      })
+      await app.inject({ method: 'POST', url: `/api/v1/documents/${documentId}/finalize`, headers })
+
+      const linked = await app.inject({
+        method: 'POST',
+        url: `/api/v1/claims/${claimId}/evidence`,
+        headers,
+        payload: { documentId, page: 2, quote: 'keyboard operable' },
+      })
+      expect(linked.statusCode).toBe(201)
+      expect(await readiness()).toBe('EVIDENCED')
     })
   })
 

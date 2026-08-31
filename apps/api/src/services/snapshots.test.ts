@@ -7,11 +7,29 @@ import { EntityService } from './entities.js'
 import { ClaimService } from './claims.js'
 import { SnapshotService } from './snapshots.js'
 import type { AuthContext } from '../auth.js'
+import type { DocumentRecord } from './documents.js'
 import { bankEntityRequest } from '../acceptance/helpers.js'
 
 const PACKS_DIR = fileURLToPath(new URL('../../../../packs', import.meta.url))
 const auth: AuthContext = { tenantId: 't-demo', actor: 'manager@acme' }
 const CONTROL = 'EAA-EN549-9-1-1-1'
+
+const availableDoc = (tenantId: string, id: string): DocumentRecord => ({
+  id,
+  tenantId,
+  filename: `${id}.pdf`,
+  mediaType: 'application/pdf',
+  sizeBytes: 10,
+  uploadKey: `quarantine/${tenantId}/${id}`,
+  objectKey: `originals/${tenantId}/${id}`,
+  contentHash: 'sha256:beef',
+  accessClass: 'INTERNAL_CONFIDENTIAL',
+  status: 'AVAILABLE',
+  scanNote: null,
+  ingestedBy: 'tester',
+  createdAt: '2026-08-31T00:00:00.000Z',
+  availableAt: '2026-08-31T00:00:01.000Z',
+})
 
 async function setup(): Promise<{
   claims: ClaimService
@@ -62,13 +80,15 @@ describe('SnapshotService', () => {
     const asserted = await ctx.claims.assert(auth, ctx.entityId, CONTROL, { value: 'alt text' })
     if (!asserted.ok) throw new Error()
     await ctx.claims.decide(auth, asserted.claim.id, { decision: 'APPROVED' })
+    ctx.stores.documents.push(availableDoc(auth.tenantId, 'doc_s1'))
+    await ctx.claims.linkEvidence(auth, asserted.claim.id, { documentId: 'doc_s1' })
 
     // the stored snapshot is unchanged
     const reread = await ctx.snapshots.get(auth, before.snapshot.id)
     expect(reread?.contentHash).toBe(before.snapshot.contentHash)
     expect(reread?.document.exceptions).toHaveLength(exceptionsBefore)
 
-    // a new snapshot reflects the approval — one fewer exception for CONTROL
+    // a new snapshot reflects the approval + evidence — CONTROL is no longer an exception
     const after = await ctx.snapshots.create(auth, ctx.entityId)
     if (!after.ok) throw new Error()
     expect(after.snapshot.contentHash).not.toBe(before.snapshot.contentHash)

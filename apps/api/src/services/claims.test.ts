@@ -53,7 +53,7 @@ describe('ClaimService', () => {
     expect(row?.pendingClaims).toBe(1)
   })
 
-  it('approving a claim makes the control EVIDENCED and records a decision', async () => {
+  it('approving a claim with no document makes the control SELF_ATTESTED', async () => {
     const asserted = await ctx.claims.assert(auth, ctx.entityId, CONTROL, { value: 'yes' })
     if (!asserted.ok) throw new Error('assert failed')
 
@@ -68,8 +68,47 @@ describe('ClaimService', () => {
 
     const matrix = await ctx.entities.matrix(auth, ctx.entityId)
     const row = matrix?.rows.find((r) => r.control === CONTROL)
-    expect(row?.readiness).toBe('EVIDENCED')
+    expect(row?.readiness).toBe('SELF_ATTESTED')
     expect(row?.approvedValue).toBe('yes')
+  })
+
+  it('linking a supporting document moves an approved claim to EVIDENCED', async () => {
+    const asserted = await ctx.claims.assert(auth, ctx.entityId, CONTROL, { value: 'yes' })
+    if (!asserted.ok) throw new Error()
+    await ctx.claims.decide(auth, asserted.claim.id, { decision: 'APPROVED' })
+
+    ctx.stores.documents.push({
+      id: 'doc_1',
+      tenantId: auth.tenantId,
+      filename: 'audit.pdf',
+      mediaType: 'application/pdf',
+      sizeBytes: 10,
+      uploadKey: 'quarantine/t-demo/doc_1',
+      objectKey: 'originals/t-demo/doc_1',
+      contentHash: 'sha256:beef',
+      accessClass: 'INTERNAL_CONFIDENTIAL',
+      status: 'AVAILABLE',
+      scanNote: null,
+      ingestedBy: 'tester',
+      createdAt: '2026-08-31T00:00:00.000Z',
+      availableAt: '2026-08-31T00:00:01.000Z',
+    })
+
+    const linked = await ctx.claims.linkEvidence(auth, asserted.claim.id, {
+      documentId: 'doc_1',
+      page: 4,
+      quote: 'Nominal voltage: 48 V',
+    })
+    expect(linked).toMatchObject({ ok: true })
+
+    const matrix = await ctx.entities.matrix(auth, ctx.entityId)
+    const row = matrix?.rows.find((r) => r.control === CONTROL)
+    expect(row?.readiness).toBe('EVIDENCED')
+    expect(row?.evidenceCount).toBe(1)
+
+    expect(
+      await ctx.claims.linkEvidence(auth, asserted.claim.id, { documentId: 'doc_missing' }),
+    ).toMatchObject({ ok: false, code: 'DOCUMENT_NOT_FOUND' })
   })
 
   it('a second approved claim supersedes the first (history preserved)', async () => {
@@ -90,7 +129,7 @@ describe('ClaimService', () => {
 
     const matrix = await ctx.entities.matrix(auth, ctx.entityId)
     const row = matrix?.rows.find((r) => r.control === CONTROL)
-    expect(row?.readiness).toBe('EVIDENCED')
+    expect(row?.readiness).toBe('SELF_ATTESTED')
     expect(row?.approvedValue).toBe('v2')
   })
 

@@ -1,5 +1,6 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import {
+  canonicalJson,
   REVIEW_DECISIONS,
   type ClaimOrigin,
   type ClaimStatus,
@@ -40,7 +41,49 @@ export interface ReviewDecisionRecord {
   decidedAt: string
 }
 
-/** Transaction-scoped persistence port for claims + review decisions. */
+export type SupportType = 'SUPPORTS' | 'CONTEXT' | 'CONTRADICTS'
+
+export interface EvidenceLocationRecord {
+  id: string
+  tenantId: string
+  documentId: string
+  page: number | null
+  sheet: string | null
+  cell: string | null
+  bbox: unknown
+  quote: string | null
+  locationHash: string
+  createdBy: string
+  createdAt: string
+}
+
+export interface ClaimEvidenceLinkRecord {
+  id: string
+  tenantId: string
+  claimId: string
+  evidenceLocationId: string
+  supportType: SupportType
+  addedBy: string
+  createdAt: string
+}
+
+/** One evidence link joined to its location + document, for display. */
+export interface EvidenceView {
+  linkId: string
+  claimId: string
+  supportType: SupportType
+  documentId: string
+  documentFilename: string | null
+  documentHash: string | null
+  page: number | null
+  sheet: string | null
+  cell: string | null
+  quote: string | null
+  addedBy: string
+  createdAt: string
+}
+
+/** Transaction-scoped persistence port for claims + review decisions + evidence links. */
 export interface ClaimRepository {
   insert(claim: ClaimRecord): Promise<void>
   get(id: string): Promise<ClaimRecord | null>
@@ -48,20 +91,40 @@ export interface ClaimRepository {
   setStatus(id: string, status: ClaimStatus, supersedesClaimId?: string | null): Promise<void>
   recordDecision(decision: ReviewDecisionRecord): Promise<void>
   maxRevision(entityId: string, controlKey: string): Promise<number>
+
+  linkEvidence(location: EvidenceLocationRecord, link: ClaimEvidenceLinkRecord): Promise<void>
+  listEvidenceByClaim(claimId: string): Promise<EvidenceView[]>
+  listEvidenceByEntity(entityId: string): Promise<EvidenceView[]>
 }
 
-/** Roll up a claim list into per-control approved/pending counts (engine TRD §13). */
+/**
+ * Roll up a claim list into per-control approved/pending counts (engine TRD §13).
+ * Pass `evidencedClaimIds` — the ids of approved claims that have at least one
+ * `SUPPORTS` evidence link — so a claim without a document reads as
+ * `SELF_ATTESTED`, not `EVIDENCED`.
+ */
 export function claimStateByControl(
   claims: readonly ClaimRecord[],
+  evidencedClaimIds: ReadonlySet<string> = new Set(),
 ): Map<string, ControlClaimState> {
   const map = new Map<string, ControlClaimState>()
   for (const c of claims) {
     const s = map.get(c.controlKey) ?? { approved: 0, pending: 0 }
-    if (c.status === 'APPROVED') s.approved++
+    if (c.status === 'APPROVED') {
+      s.approved++
+      if (evidencedClaimIds.has(c.id)) s.evidenced = true
+    }
     if (c.status === 'PENDING_REVIEW' || c.status === 'ASSERTED') s.pending++
     map.set(c.controlKey, s)
   }
   return map
+}
+
+/** The ids of claims that have at least one `SUPPORTS` evidence link. */
+export function evidencedClaimIds(evidence: readonly EvidenceView[]): Set<string> {
+  const ids = new Set<string>()
+  for (const e of evidence) if (e.supportType === 'SUPPORTS') ids.add(e.claimId)
+  return ids
 }
 
 export function approvedClaimByControl(claims: readonly ClaimRecord[]): Map<string, ClaimRecord> {
@@ -84,6 +147,23 @@ export interface DecideInput {
   decision: ReviewDecisionKind
   reason?: string
 }
+
+export interface LinkEvidenceInput {
+  documentId: string
+  page?: number
+  sheet?: string
+  cell?: string
+  quote?: string
+  supportType?: SupportType
+}
+
+export type LinkEvidenceResult =
+  | { ok: true; evidenceLocationId: string; linkId: string }
+  | {
+      ok: false
+      code: 'CLAIM_NOT_FOUND' | 'DOCUMENT_NOT_FOUND' | 'DOCUMENT_NOT_AVAILABLE'
+      message: string
+    }
 
 export type AssertResult =
   | { ok: true; claim: ClaimRecord }
@@ -260,6 +340,80 @@ export class ClaimService {
       const updated = await u.claims.get(claim.id)
       return { ok: true, claim: updated ?? claim }
     })
+  }
+
+  async linkEvidence(
+    auth: AuthContext,
+    claimId: string,
+    input: LinkEvidenceInput,
+    now: Date = new Date(),
+  ): Promise<LinkEvidenceResult> {
+    return this.uow(auth.tenantId, async (u) => {
+      const claim = await u.claims.get(claimId)
+      if (!claim) {
+        return { ok: false, code: 'CLAIM_NOT_FOUND', message: `claim ${claimId} not found` }
+      }
+      const doc = await u.documents.get(input.documentId)
+      if (!doc) {
+        return { ok: false, code: 'DOCUMENT_NOT_FOUND', message: 'document not found' }
+      }
+      if (doc.status !== 'AVAILABLE') {
+        return {
+          ok: false,
+          code: 'DOCUMENT_NOT_AVAILABLE',
+          message: `document is ${doc.status}, not AVAILABLE`,
+        }
+      }
+
+      const at = now.toISOString()
+      const loc = {
+        documentId: input.documentId,
+        page: input.page ?? null,
+        sheet: input.sheet ?? null,
+        cell: input.cell ?? null,
+        quote: input.quote ?? null,
+      }
+      const location: EvidenceLocationRecord = {
+        id: `evl_${randomUUID()}`,
+        tenantId: auth.tenantId,
+        ...loc,
+        bbox: null,
+        locationHash: `sha256:${createHash('sha256')
+          .update(canonicalJson({ ...loc, hash: doc.contentHash }))
+          .digest('hex')}`,
+        createdBy: auth.actor,
+        createdAt: at,
+      }
+      const link: ClaimEvidenceLinkRecord = {
+        id: `cel_${randomUUID()}`,
+        tenantId: auth.tenantId,
+        claimId,
+        evidenceLocationId: location.id,
+        supportType: input.supportType ?? 'SUPPORTS',
+        addedBy: auth.actor,
+        createdAt: at,
+      }
+      await u.claims.linkEvidence(location, link)
+      await u.audit({
+        actorType: 'user',
+        actorId: auth.actor,
+        action: 'claim.evidence_linked',
+        targetType: 'claim',
+        targetId: claimId,
+        occurredAt: at,
+        metadata: {
+          documentId: input.documentId,
+          supportType: link.supportType,
+          controlKey: claim.controlKey,
+          entityId: claim.entityId,
+        },
+      })
+      return { ok: true, evidenceLocationId: location.id, linkId: link.id }
+    })
+  }
+
+  async listEvidence(auth: AuthContext, claimId: string): Promise<EvidenceView[]> {
+    return this.uow(auth.tenantId, (u) => u.claims.listEvidenceByClaim(claimId))
   }
 
   async reviewQueue(

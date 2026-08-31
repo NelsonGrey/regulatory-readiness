@@ -1,6 +1,14 @@
 import type { PoolClient } from 'pg'
 import type { ClaimStatus } from '@rre/domain'
-import type { ClaimRecord, ClaimRepository, ReviewDecisionRecord } from '../services/claims.js'
+import type {
+  ClaimEvidenceLinkRecord,
+  ClaimRecord,
+  ClaimRepository,
+  EvidenceLocationRecord,
+  EvidenceView,
+  ReviewDecisionRecord,
+  SupportType,
+} from '../services/claims.js'
 
 interface ClaimRow {
   id: string
@@ -132,5 +140,111 @@ export class PgClaimRepository implements ClaimRepository {
       [this.tenantId, entityId, controlKey],
     )
     return res.rows[0]?.max ?? 0
+  }
+
+  async linkEvidence(
+    location: EvidenceLocationRecord,
+    link: ClaimEvidenceLinkRecord,
+  ): Promise<void> {
+    await this.db.query(
+      `INSERT INTO evidence_location
+         (id, tenant_id, document_id, page, sheet, cell, bbox, quote, location_hash, created_by, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [
+        location.id,
+        location.tenantId,
+        location.documentId,
+        location.page,
+        location.sheet,
+        location.cell,
+        location.bbox === null ? null : JSON.stringify(location.bbox),
+        location.quote,
+        location.locationHash,
+        location.createdBy,
+        location.createdAt,
+      ],
+    )
+    await this.db.query(
+      `INSERT INTO claim_evidence_link
+         (id, tenant_id, claim_id, evidence_location_id, support_type, added_by, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (claim_id, evidence_location_id) DO NOTHING`,
+      [
+        link.id,
+        link.tenantId,
+        link.claimId,
+        link.evidenceLocationId,
+        link.supportType,
+        link.addedBy,
+        link.createdAt,
+      ],
+    )
+  }
+
+  private evidenceQuery(where: string, param: string): Promise<{ rows: EvidenceRow[] }> {
+    return this.db.query<EvidenceRow>(
+      `SELECT l.id AS link_id, l.claim_id, l.support_type, l.added_by, l.created_at,
+              e.document_id, e.page, e.sheet, e.cell, e.quote,
+              d.filename AS document_filename, d.content_hash AS document_hash
+         FROM claim_evidence_link l
+         JOIN evidence_location e ON e.id = l.evidence_location_id AND e.tenant_id = l.tenant_id
+         LEFT JOIN document d ON d.id = e.document_id AND d.tenant_id = l.tenant_id
+        WHERE l.tenant_id = $1 AND ${where}
+        ORDER BY l.created_at`,
+      [this.tenantId, param],
+    )
+  }
+
+  async listEvidenceByClaim(claimId: string): Promise<EvidenceView[]> {
+    const { rows } = await this.evidenceQuery('l.claim_id = $2', claimId)
+    return rows.map(toEvidenceView)
+  }
+
+  async listEvidenceByEntity(entityId: string): Promise<EvidenceView[]> {
+    const { rows } = await this.db.query<EvidenceRow>(
+      `SELECT l.id AS link_id, l.claim_id, l.support_type, l.added_by, l.created_at,
+              e.document_id, e.page, e.sheet, e.cell, e.quote,
+              d.filename AS document_filename, d.content_hash AS document_hash
+         FROM claim_evidence_link l
+         JOIN claim c ON c.id = l.claim_id AND c.tenant_id = l.tenant_id
+         JOIN evidence_location e ON e.id = l.evidence_location_id AND e.tenant_id = l.tenant_id
+         LEFT JOIN document d ON d.id = e.document_id AND d.tenant_id = l.tenant_id
+        WHERE l.tenant_id = $1 AND c.entity_id = $2
+        ORDER BY l.created_at`,
+      [this.tenantId, entityId],
+    )
+    return rows.map(toEvidenceView)
+  }
+}
+
+interface EvidenceRow {
+  link_id: string
+  claim_id: string
+  support_type: SupportType
+  added_by: string
+  created_at: Date
+  document_id: string
+  page: number | null
+  sheet: string | null
+  cell: string | null
+  quote: string | null
+  document_filename: string | null
+  document_hash: string | null
+}
+
+function toEvidenceView(r: EvidenceRow): EvidenceView {
+  return {
+    linkId: r.link_id,
+    claimId: r.claim_id,
+    supportType: r.support_type,
+    documentId: r.document_id,
+    documentFilename: r.document_filename,
+    documentHash: r.document_hash,
+    page: r.page,
+    sheet: r.sheet,
+    cell: r.cell,
+    quote: r.quote,
+    addedBy: r.added_by,
+    createdAt: r.created_at.toISOString(),
   }
 }

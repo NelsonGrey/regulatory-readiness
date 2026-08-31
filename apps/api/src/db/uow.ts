@@ -9,7 +9,14 @@ import { PgSnapshotRepository } from '../repositories/snapshots.pg.js'
 import { PgNotificationRepository } from '../repositories/notifications.pg.js'
 import { PgDocumentRepository } from '../repositories/documents.pg.js'
 import type { EntityRepository } from '../services/entities.js'
-import type { ClaimRecord, ClaimRepository, ReviewDecisionRecord } from '../services/claims.js'
+import type {
+  ClaimEvidenceLinkRecord,
+  ClaimRecord,
+  ClaimRepository,
+  EvidenceLocationRecord,
+  EvidenceView,
+  ReviewDecisionRecord,
+} from '../services/claims.js'
 import type { SnapshotRecord, SnapshotRepository } from '../services/snapshots.js'
 import type { NotificationRecord, NotificationRepository } from '../services/notifications.js'
 import type {
@@ -197,6 +204,8 @@ export interface InMemoryStores {
   outbox: OutboxRecord[]
   claims: ClaimRecord[]
   decisions: ReviewDecisionRecord[]
+  evidenceLocations: EvidenceLocationRecord[]
+  claimEvidenceLinks: ClaimEvidenceLinkRecord[]
   requests: EvidenceRequestRecord[]
   requestItems: RequestItemRecord[]
   grants: AccessGrantRecord[]
@@ -217,6 +226,8 @@ export function createInMemoryStores(): InMemoryStores {
     outbox: [],
     claims: [],
     decisions: [],
+    evidenceLocations: [],
+    claimEvidenceLinks: [],
     requests: [],
     requestItems: [],
     grants: [],
@@ -241,6 +252,8 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
     const stagedAudit: AuditRecord[] = []
     const stagedOutbox: OutboxRecord[] = []
     const stagedClaims: ClaimRecord[] = []
+    const stagedEvidenceLocations: EvidenceLocationRecord[] = []
+    const stagedEvidenceLinks: ClaimEvidenceLinkRecord[] = []
     const stagedDecisions: ReviewDecisionRecord[] = []
     const claimStatusOverrides = new Map<
       string,
@@ -392,7 +405,61 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
           .map((c) => c.revision)
         return revs.length > 0 ? Math.max(...revs) : 0
       },
+      async linkEvidence(location, link) {
+        if (location.tenantId !== tenantId || link.tenantId !== tenantId) {
+          throw new Error('unit-of-work tenant mismatch')
+        }
+        stagedEvidenceLocations.push({ ...location })
+        if (
+          !allEvidenceLinks().some(
+            (l) => l.claimId === link.claimId && l.evidenceLocationId === link.evidenceLocationId,
+          )
+        ) {
+          stagedEvidenceLinks.push({ ...link })
+        }
+      },
+      async listEvidenceByClaim(claimId) {
+        return evidenceViews((l) => l.claimId === claimId)
+      },
+      async listEvidenceByEntity(entityId) {
+        const claimIds = new Set(
+          allClaims()
+            .filter((c) => c.tenantId === tenantId && c.entityId === entityId)
+            .map((c) => c.id),
+        )
+        return evidenceViews((l) => claimIds.has(l.claimId))
+      },
     }
+
+    const allEvidenceLocations = (): EvidenceLocationRecord[] => [
+      ...stores.evidenceLocations,
+      ...stagedEvidenceLocations,
+    ]
+    const allEvidenceLinks = (): ClaimEvidenceLinkRecord[] => [
+      ...stores.claimEvidenceLinks,
+      ...stagedEvidenceLinks,
+    ]
+    const evidenceViews = (pick: (l: ClaimEvidenceLinkRecord) => boolean): EvidenceView[] =>
+      allEvidenceLinks()
+        .filter((l) => l.tenantId === tenantId && pick(l))
+        .map((l) => {
+          const loc = allEvidenceLocations().find((e) => e.id === l.evidenceLocationId)
+          const doc = stores.documents.find((d) => d.id === loc?.documentId)
+          return {
+            linkId: l.id,
+            claimId: l.claimId,
+            supportType: l.supportType,
+            documentId: loc?.documentId ?? '',
+            documentFilename: doc?.filename ?? null,
+            documentHash: doc?.contentHash ?? null,
+            page: loc?.page ?? null,
+            sheet: loc?.sheet ?? null,
+            cell: loc?.cell ?? null,
+            quote: loc?.quote ?? null,
+            addedBy: l.addedBy,
+            createdAt: l.createdAt,
+          }
+        })
 
     const allSnapshots = (): SnapshotRecord[] => [...stores.snapshots, ...stagedSnapshots]
 
@@ -582,6 +649,8 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
     stores.outbox.push(...stagedOutbox)
     for (const c of stagedClaims) stores.claims.push(c)
     for (const d of stagedDecisions) stores.decisions.push(d)
+    for (const e of stagedEvidenceLocations) stores.evidenceLocations.push(e)
+    for (const l of stagedEvidenceLinks) stores.claimEvidenceLinks.push(l)
     for (const [id, o] of claimStatusOverrides) {
       const c = stores.claims.find((x) => x.id === id)
       if (c) {

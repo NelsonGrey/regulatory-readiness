@@ -53,6 +53,22 @@ export interface MatrixRow {
   approvedValue: string | null
   approvedUnit: string | null
   pendingClaims: number
+  evidenceCount: number
+}
+
+export interface EvidenceView {
+  linkId: string
+  claimId: string
+  supportType: 'SUPPORTS' | 'CONTEXT' | 'CONTRADICTS'
+  documentId: string
+  documentFilename: string | null
+  documentHash: string | null
+  page: number | null
+  sheet: string | null
+  cell: string | null
+  quote: string | null
+  addedBy: string
+  createdAt: string
 }
 
 export type ReadinessCounts = Record<string, number>

@@ -14,6 +14,7 @@ const ENTITY_STATUS_LABEL: Record<string, string> = {
 
 const READINESS_ORDER = [
   'EVIDENCED',
+  'SELF_ATTESTED',
   'PENDING_REVIEW',
   'MISSING',
   'CONFLICTING',
@@ -158,6 +159,9 @@ export function MatrixPage(): ReactElement {
                 <ReadinessChip state={r.readiness} reason={r.reason} />
                 {r.pendingClaims > 0 ? (
                   <span className="rre-badge"> {r.pendingClaims} pending</span>
+                ) : null}
+                {r.evidenceCount > 0 ? (
+                  <span className="rre-badge"> {r.evidenceCount} doc(s)</span>
                 ) : null}
               </td>
               <td>

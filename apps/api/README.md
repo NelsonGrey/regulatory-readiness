@@ -36,6 +36,7 @@ pnpm --filter @rre/api dev     # tsx watch, http://localhost:3000
 | `GET /api/v1/documents` (`?entityId=`), `GET /api/v1/documents/:id` | Document list / detail (with associations) |
 | `GET /api/v1/documents/:id/download` | A download URL — only when `AVAILABLE` |
 | `POST /api/v1/documents/:id/associations` | Link a document to an entity / request / claim |
+| `POST /api/v1/claims/:claimId/evidence`, `GET /api/v1/claims/:claimId/evidence` | Pin a spot in an `AVAILABLE` document to a claim — a `SUPPORTS` link is what turns `SELF_ATTESTED` into `EVIDENCED` |
 | `GET /contributor/v1/requests/:token` | SUP-001 — the requested controls + entity name only (plus any saved draft); no tenant header |
 | `PUT /contributor/v1/requests/:token/draft` | SUP-002 — save in-progress answers (mutable, one draft per request; cleared on submit) |
 | `POST /contributor/v1/requests/:token/submit` | SUP-003 — no-account submission (availability state per item); writes an immutable version, returns a receipt |

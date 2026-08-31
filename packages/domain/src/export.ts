@@ -101,6 +101,7 @@ export function canonicalExportVerdict(status: EntityStatus, snapshotKey: string
 
 const EXCEPTION_NOTE: Partial<Record<ReadinessState, string>> = {
   MISSING: 'No approved evidence has been recorded.',
+  SELF_ATTESTED: 'An approved value exists but no supporting document is linked.',
   PENDING_REVIEW: 'A proposal exists but has not been reviewed.',
   CONFLICTING: 'Competing claims are unresolved.',
   STALE: 'The approved evidence is out of date and needs re-checking.',

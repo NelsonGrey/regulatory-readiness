@@ -48,6 +48,17 @@ export const ReviewDecisionRequest = z.object({
 })
 export type ReviewDecisionRequest = z.infer<typeof ReviewDecisionRequest>
 
+/** POST /api/v1/claims/:claimId/evidence — pin a spot in an AVAILABLE document to this claim. */
+export const LinkEvidenceRequest = z.object({
+  documentId: z.string().min(1),
+  page: z.number().int().positive().optional(),
+  sheet: z.string().min(1).max(255).optional(),
+  cell: z.string().min(1).max(64).optional(),
+  quote: z.string().max(4000).optional(),
+  supportType: z.enum(['SUPPORTS', 'CONTEXT', 'CONTRADICTS']).optional(),
+})
+export type LinkEvidenceRequest = z.infer<typeof LinkEvidenceRequest>
+
 /** POST /api/v1/entities/:id/requests */
 export const CreateRequestRequest = z.object({
   controlKeys: z.array(z.string().min(1)).min(1),

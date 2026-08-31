@@ -32,11 +32,27 @@ describe('deriveControlReadiness', () => {
     expect(deriveControlReadiness({ ...req, approvedClaims: 0, pendingClaims: 2 })).toBe(
       'PENDING_REVIEW',
     )
+    // approved but no supporting document
     expect(deriveControlReadiness({ ...req, approvedClaims: 1, pendingClaims: 1 })).toBe(
-      'EVIDENCED',
+      'SELF_ATTESTED',
     )
+    // approved with a document linked
     expect(
-      deriveControlReadiness({ ...req, approvedClaims: 1, pendingClaims: 0, approvedStale: true }),
+      deriveControlReadiness({
+        ...req,
+        approvedClaims: 1,
+        pendingClaims: 0,
+        evidencedByDocument: true,
+      }),
+    ).toBe('EVIDENCED')
+    expect(
+      deriveControlReadiness({
+        ...req,
+        approvedClaims: 1,
+        pendingClaims: 0,
+        approvedStale: true,
+        evidencedByDocument: true,
+      }),
     ).toBe('STALE')
     expect(deriveControlReadiness({ ...req, approvedClaims: 2, pendingClaims: 0 })).toBe(
       'CONFLICTING',
@@ -58,25 +74,46 @@ describe('readinessForEntity', () => {
   const claims = (m: Record<string, ControlClaimState>) => new Map(Object.entries(m))
 
   it('is BLOCKED while a required control is missing; optional gaps do not block', () => {
-    const r = readinessForEntity(controls, claims({ R1: { approved: 1, pending: 0 } }))
+    const r = readinessForEntity(
+      controls,
+      claims({ R1: { approved: 1, pending: 0, evidenced: true } }),
+    )
     expect(r.entityStatus).toBe('BLOCKED') // R2 missing
     expect(r.counts.EVIDENCED).toBe(1)
     expect(r.counts.MISSING).toBe(2) // R2 + O1
     expect(r.counts.NOT_APPLICABLE).toBe(1)
   })
 
+  it('an approved required control with no document is SELF_ATTESTED, not EVIDENCE_READY', () => {
+    const r = readinessForEntity(
+      controls,
+      claims({
+        R1: { approved: 1, pending: 0, evidenced: true },
+        R2: { approved: 1, pending: 0 },
+      }),
+    )
+    expect(r.counts.SELF_ATTESTED).toBe(1)
+    expect(r.entityStatus).toBe('REVIEW_NEEDED')
+  })
+
   it('is REVIEW_NEEDED when required controls are evidenced or pending only', () => {
     const r = readinessForEntity(
       controls,
-      claims({ R1: { approved: 1, pending: 0 }, R2: { approved: 0, pending: 1 } }),
+      claims({
+        R1: { approved: 1, pending: 0, evidenced: true },
+        R2: { approved: 0, pending: 1 },
+      }),
     )
     expect(r.entityStatus).toBe('REVIEW_NEEDED')
   })
 
-  it('is EVIDENCE_READY when every required control is evidenced', () => {
+  it('is EVIDENCE_READY only when every required control has a document', () => {
     const r = readinessForEntity(
       controls,
-      claims({ R1: { approved: 1, pending: 0 }, R2: { approved: 1, pending: 0 } }),
+      claims({
+        R1: { approved: 1, pending: 0, evidenced: true },
+        R2: { approved: 1, pending: 0, evidenced: true },
+      }),
     )
     expect(r.entityStatus).toBe('EVIDENCE_READY')
   })
@@ -84,7 +121,10 @@ describe('readinessForEntity', () => {
   it('a required conflict blocks even when the rest are evidenced', () => {
     const r = readinessForEntity(
       controls,
-      claims({ R1: { approved: 1, pending: 0 }, R2: { approved: 2, pending: 0 } }),
+      claims({
+        R1: { approved: 1, pending: 0, evidenced: true },
+        R2: { approved: 2, pending: 0 },
+      }),
     )
     expect(r.entityStatus).toBe('BLOCKED')
     expect(r.counts.CONFLICTING).toBe(1)

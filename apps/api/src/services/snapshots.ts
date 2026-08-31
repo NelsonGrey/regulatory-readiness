@@ -11,7 +11,7 @@ import {
 import type { AuthContext } from '../auth.js'
 import type { PackRegistry } from '../pack-registry.js'
 import type { UnitOfWork } from '../db/uow.js'
-import { approvedClaimByControl, claimStateByControl } from './claims.js'
+import { approvedClaimByControl, claimStateByControl, evidencedClaimIds } from './claims.js'
 
 export interface SnapshotRecord {
   id: string
@@ -68,7 +68,10 @@ export class SnapshotService {
       const manifest = pack?.loaded?.manifest
 
       const claims = await u.claims.listByEntity(entityId)
-      const claimState = claimStateByControl(claims)
+      const claimState = claimStateByControl(
+        claims,
+        evidencedClaimIds(await u.claims.listEvidenceByEntity(entityId)),
+      )
       const approved = approvedClaimByControl(claims)
 
       const readiness = readinessForEntity(

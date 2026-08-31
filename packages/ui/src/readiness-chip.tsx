@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 /** User-facing label + icon glyph per readiness state (engine detailed design 01 §8). */
 const PRESENTATION: Record<string, { label: string; glyph: string }> = {
   EVIDENCED: { label: 'Evidenced', glyph: '✓' },
+  SELF_ATTESTED: { label: 'Self-attested — no document', glyph: '✎' },
   MISSING: { label: 'Missing', glyph: '!' },
   CONFLICTING: { label: 'Conflict', glyph: '⚠' },
   STALE: { label: 'Stale', glyph: '◷' },

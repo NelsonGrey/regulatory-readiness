@@ -41,11 +41,15 @@ export interface ControlReadinessInput {
   approvedStale?: boolean
   /** An unresolved conflict has been recorded for this control. */
   conflictOpen?: boolean
+  /** The approved claim has at least one supporting document linked (engine principle 1). */
+  evidencedByDocument?: boolean
 }
 
 /**
  * One control's readiness state. Precedence: excluded-by-applicability →
- * conflicting → stale/evidenced (approved present) → pending → missing.
+ * conflicting → stale → evidenced / self-attested (approved present) → pending →
+ * missing. An approved claim with no supporting document is `SELF_ATTESTED`, not
+ * `EVIDENCED` — a claim is not the same as evidence.
  */
 export function deriveControlReadiness(i: ControlReadinessInput): ReadinessState {
   switch (i.applicability) {
@@ -63,7 +67,10 @@ export function deriveControlReadiness(i: ControlReadinessInput): ReadinessState
   }
 
   if (i.conflictOpen || i.approvedClaims > 1) return 'CONFLICTING'
-  if (i.approvedClaims === 1) return i.approvedStale ? 'STALE' : 'EVIDENCED'
+  if (i.approvedClaims === 1) {
+    if (i.approvedStale) return 'STALE'
+    return i.evidencedByDocument ? 'EVIDENCED' : 'SELF_ATTESTED'
+  }
   if (i.pendingClaims > 0) return 'PENDING_REVIEW'
   return 'MISSING'
 }
@@ -87,10 +94,13 @@ export interface ControlClaimState {
   pending: number
   stale?: boolean
   conflict?: boolean
+  /** The approved claim for this control has a supporting document linked. */
+  evidenced?: boolean
 }
 
 const ZERO_COUNTS = (): ReadinessCounts => ({
   EVIDENCED: 0,
+  SELF_ATTESTED: 0,
   MISSING: 0,
   CONFLICTING: 0,
   STALE: 0,
@@ -121,6 +131,7 @@ export function readinessForEntity(
         pendingClaims: cs?.pending ?? 0,
         approvedStale: cs?.stale,
         conflictOpen: cs?.conflict,
+        evidencedByDocument: cs?.evidenced,
       }),
     }
   })
