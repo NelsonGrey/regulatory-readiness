@@ -50,6 +50,7 @@ stand-in trusts the `x-user-email` header.
 | `POST /webhooks/stripe` | Raw body, signature-verified, no session — moves `plan` / `status` / `current_period_end` |
 | `GET /api/v1/packs`, `GET /api/v1/packs/:packKey` | Installed control packs + validation status (registry-backed, ADR 0005) |
 | `POST /api/v1/entities` | ENT-001 — create a regulated entity; records scope facts, pack + snapshot, per-control applicability, actor, time, and a reproducibility hash (AC-003) |
+| `GET /api/v1/entities` | Every entity in the workspace with its current snapshot (newest first) |
 | `GET /api/v1/entities/:id/matrix` | MAT-001 — per-control applicability + readiness, approved value, entity status, honest counts (AC-004) |
 | `POST /api/v1/entities/:id/re-evaluate` | Re-run applicability (optional corrected `facts`) → new evaluation version + a diff; claims and evidence are kept (AC-008) |
 | `GET /api/v1/packs/:packKey/impact` | Entities on an older control snapshot than the installed pack — added / removed control keys and orphaned approved claims per entity; adopting is a re-evaluate (AC-009) |

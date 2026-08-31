@@ -104,6 +104,12 @@ export async function registerEntityRoutes(
     return result.report
   })
 
+  app.get('/entities', async (req, reply) => {
+    const auth = authFromRequest(req)
+    if (!auth) return reply.code(401).send(NO_TENANT)
+    return { entities: await opts.entities.list(auth) }
+  })
+
   app.get('/entities/:id/matrix', async (req, reply) => {
     const auth = authFromRequest(req)
     if (!auth) return reply.code(401).send(NO_TENANT)

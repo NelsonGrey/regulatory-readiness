@@ -426,6 +426,21 @@ export interface AcceptInviteResponse {
   role: MemberRole
 }
 
+export interface EntitySummary {
+  id: string
+  name: string
+  entityIdentifier: string
+  packKey: string
+  entityKind: string
+  createdAt: string
+  snapshotKey: string
+  evaluationVersion: number
+}
+
+export interface EntityList {
+  entities: EntitySummary[]
+}
+
 export interface BillingSummary {
   plan: 'trial' | 'starter' | 'growth'
   status: 'trialing' | 'active' | 'past_due' | 'canceled'

@@ -16,6 +16,7 @@ import { DeletionPage } from './routes/DeletionPage.js'
 import { MembersPage } from './routes/MembersPage.js'
 import { JoinPage } from './routes/JoinPage.js'
 import { BillingPage } from './routes/BillingPage.js'
+import { OnboardingPage } from './routes/OnboardingPage.js'
 
 export const routes: RouteObject[] = [
   {
@@ -23,6 +24,7 @@ export const routes: RouteObject[] = [
     element: <Shell />,
     children: [
       { index: true, element: <PacksPage /> },
+      { path: 'w/onboarding', element: <OnboardingPage /> },
       { path: 'w/entities/new', element: <NewEntityPage /> },
       { path: 'w/packs/:packKey/impact', element: <PackImpactPage /> },
       { path: 'w/entities/:id/matrix', element: <MatrixPage /> },

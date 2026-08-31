@@ -38,4 +38,32 @@ describe('PacksPage', () => {
     renderRoute('/')
     expect(await screen.findByText(/could not load control packs/i)).toBeInTheDocument()
   })
+
+  it('shows a Get started card when the workspace has no entities', async () => {
+    mockApi([
+      { path: '/api/v1/packs', body: { packs: [] } },
+      { path: '/api/v1/entities', method: 'GET', body: { entities: [] } },
+    ])
+    renderRoute('/')
+    const cta = await screen.findByTestId('onboarding-cta')
+    expect(cta).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /get started/i })).toHaveAttribute(
+      'href',
+      '/w/onboarding',
+    )
+  })
+
+  it('hides the Get started card once an entity exists', async () => {
+    mockApi([
+      { path: '/api/v1/packs', body: { packs: [] } },
+      {
+        path: '/api/v1/entities',
+        method: 'GET',
+        body: { entities: [{ id: 'ent_1', name: 'Acme', packKey: 'eaa-accessibility' }] },
+      },
+    ])
+    renderRoute('/')
+    expect(await screen.findByRole('heading', { name: /control packs/i })).toBeInTheDocument()
+    expect(screen.queryByTestId('onboarding-cta')).not.toBeInTheDocument()
+  })
 })

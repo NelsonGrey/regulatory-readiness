@@ -430,6 +430,34 @@ export class EntityService {
       return { ok: true, report: { packKey, currentSnapshotKey, upToDate, impacted } }
     })
   }
+
+  /** Every entity in the workspace with its current evaluation (newest first). */
+  async list(auth: AuthContext): Promise<EntitySummary[]> {
+    const rows = await this.uow(auth.tenantId, (u) => u.entities.list())
+    return rows
+      .map(({ entity, evaluation }) => ({
+        id: entity.id,
+        name: entity.name,
+        entityIdentifier: entity.entityIdentifier,
+        packKey: entity.packKey,
+        entityKind: entity.entityKind,
+        createdAt: entity.createdAt,
+        snapshotKey: evaluation.snapshotKey,
+        evaluationVersion: evaluation.version,
+      }))
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
+  }
+}
+
+export interface EntitySummary {
+  id: string
+  name: string
+  entityIdentifier: string
+  packKey: string
+  entityKind: string
+  createdAt: string
+  snapshotKey: string
+  evaluationVersion: number
 }
 
 export interface ImpactedEntity {

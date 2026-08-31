@@ -146,4 +146,34 @@ describe('POST /api/v1/entities + matrix', () => {
     const res = await app.inject({ method: 'POST', url: '/api/v1/entities', payload: createBody })
     expect(res.statusCode).toBe(401)
   })
+
+  it('lists the workspace entities, newest first, scoped to the tenant', async () => {
+    for (const id of ['first', 'second']) {
+      await app.inject({
+        method: 'POST',
+        url: '/api/v1/entities',
+        headers: { 'x-tenant-id': 't-alpha', 'x-actor': 'manager@acme' },
+        payload: { ...createBody, entityIdentifier: id, name: `Acme ${id}` },
+      })
+    }
+    await app.inject({
+      method: 'POST',
+      url: '/api/v1/entities',
+      headers: { 'x-tenant-id': 't-bravo' },
+      payload: { ...createBody, entityIdentifier: 'other' },
+    })
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/v1/entities',
+      headers: { 'x-tenant-id': 't-alpha' },
+    })
+    expect(res.statusCode).toBe(200)
+    const { entities } = res.json() as {
+      entities: Array<{ name: string; packKey: string; snapshotKey: string }>
+    }
+    expect(entities.map((e) => e.name).sort()).toEqual(['Acme first', 'Acme second'])
+    expect(entities.every((e) => e.packKey === 'eaa-accessibility')).toBe(true)
+    expect(entities.every((e) => e.snapshotKey === 'EAA-IE-EN549-V3.2.1-DRAFT')).toBe(true)
+  })
 })
