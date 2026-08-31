@@ -13,6 +13,7 @@ const OPEN_PREFIXES = [
   '/api/v1/members',
   '/api/v1/invites',
   '/api/v1/packs',
+  '/api/v1/admin',
 ]
 
 function isOpen(path: string): boolean {

@@ -25,6 +25,12 @@ import {
 } from './services/billing.js'
 import { noopBillingProvider, type BillingProvider } from './billing/provider.js'
 import { consoleEmailSender, type EmailSender } from './email/sender.js'
+import {
+  InMemoryPackGovernanceRepository,
+  PackGovernanceService,
+  type PackGovernanceRepository,
+} from './services/pack-governance.js'
+import { registerPackAdminRoutes } from './routes/pack-admin.js'
 import { parseStripeEvent, verifyStripeSignature } from './billing/stripe-webhook.js'
 import type { Plan } from './billing/plans.js'
 import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
@@ -83,6 +89,10 @@ export interface BuildAppOptions {
   appBaseUrl?: string
   /** Transactional email. Defaults to a console sender that logs the message. */
   emailSender?: EmailSender
+  /** Pack review + activation store. Defaults to in-memory. */
+  packGovernanceRepo?: PackGovernanceRepository
+  /** Emails allowed to govern control packs (platform admins). */
+  platformAdmins?: string[]
   /**
    * Dev stand-in for the membership hook: synthesise an `owner` from headers
    * when no real membership exists. Off by default — production refuses a
@@ -123,6 +133,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     emailSender,
     appBaseUrl,
   )
+  const packGovernanceRepo = options.packGovernanceRepo ?? new InMemoryPackGovernanceRepository()
+  const platformAdmins = options.platformAdmins ?? []
 
   const app = Fastify({ logger: false })
 
@@ -145,7 +157,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         devAuth: options.devAuth ?? false,
       })
       const registry = options.packRegistry ?? (await getPackRegistry(packsDir))
-      await registerPackRoutes(v1, { registry })
+      const packGovernance = new PackGovernanceService(packGovernanceRepo, registry)
+      await registerPackRoutes(v1, { registry, governance: packGovernance })
+      await registerPackAdminRoutes(v1, {
+        governance: packGovernance,
+        verifier,
+        platformAdmins,
+      })
       await registerEntityRoutes(v1, {
         entities: new EntityService(unitOfWork, registry, billingService),
       })

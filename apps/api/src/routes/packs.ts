@@ -1,8 +1,11 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import type { PackRegistry } from '../pack-registry.js'
+import type { PackGovernanceService } from '../services/pack-governance.js'
 
 interface PackRoutesOptions extends FastifyPluginOptions {
   registry: PackRegistry
+  /** When present, the reported `status` is the governed (activation-aware) status. */
+  governance?: PackGovernanceService
 }
 
 /**
@@ -15,16 +18,21 @@ export async function registerPackRoutes(
   opts: PackRoutesOptions,
 ): Promise<void> {
   app.get('/packs', async () => ({
-    packs: opts.registry.list().map((p) => ({
-      packKey: p.packKey,
-      title: p.manifest?.title ?? null,
-      jurisdiction: p.manifest?.jurisdiction ?? null,
-      status: p.manifest?.status ?? null,
-      snapshotKey: p.manifest?.snapshotKey ?? null,
-      valid: p.valid,
-      issues: p.issues,
-      computedChecksum: p.computedChecksum || null,
-    })),
+    packs: await Promise.all(
+      opts.registry.list().map(async (p) => ({
+        packKey: p.packKey,
+        title: p.manifest?.title ?? null,
+        jurisdiction: p.manifest?.jurisdiction ?? null,
+        status: opts.governance
+          ? await opts.governance.effectiveStatus(p.packKey)
+          : (p.manifest?.status ?? null),
+        onDiskStatus: p.manifest?.status ?? null,
+        snapshotKey: p.manifest?.snapshotKey ?? null,
+        valid: p.valid,
+        issues: p.issues,
+        computedChecksum: p.computedChecksum || null,
+      })),
+    ),
   }))
 
   app.get('/packs/:packKey', async (req, reply) => {

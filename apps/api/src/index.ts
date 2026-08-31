@@ -10,6 +10,11 @@ import {
 import { pgResolveGrant } from './repositories/requests.pg.js'
 import { PgAccountsRepository } from './repositories/accounts.pg.js'
 import { PgBillingRepository } from './repositories/billing.pg.js'
+import { PgPackGovernanceRepository } from './repositories/pack-governance.pg.js'
+import {
+  InMemoryPackGovernanceRepository,
+  type PackGovernanceRepository,
+} from './services/pack-governance.js'
 import { InMemoryAccountsRepository, type AccountsRepository } from './services/accounts.js'
 import { InMemoryBillingRepository, type BillingRepository } from './services/billing.js'
 import {
@@ -56,6 +61,7 @@ async function main(): Promise<void> {
   let resolveGrant: ResolveGrant | undefined
   let accounts: AccountsRepository
   let billingRepo: BillingRepository
+  let packGovernanceRepo: PackGovernanceRepository
 
   const databaseUrl = process.env.DATABASE_URL
   if (databaseUrl) {
@@ -68,6 +74,7 @@ async function main(): Promise<void> {
     resolveGrant = (hash) => pgResolveGrant(appPool, hash)
     accounts = new PgAccountsRepository(appPool)
     billingRepo = new PgBillingRepository(appPool)
+    packGovernanceRepo = new PgPackGovernanceRepository(appPool)
   } else {
     log.warn('DATABASE_URL not set — using in-memory storage')
     const stores = createInMemoryStores()
@@ -75,7 +82,13 @@ async function main(): Promise<void> {
     resolveGrant = async (hash) => stores.grants.find((g) => g.tokenHash === hash) ?? null
     accounts = new InMemoryAccountsRepository()
     billingRepo = new InMemoryBillingRepository()
+    packGovernanceRepo = new InMemoryPackGovernanceRepository()
   }
+
+  const platformAdmins = (process.env.PLATFORM_ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
 
   const stripePrices: Partial<Record<Plan, string>> = {
     starter: process.env.STRIPE_PRICE_STARTER,
@@ -143,6 +156,8 @@ async function main(): Promise<void> {
     stripePrices,
     appBaseUrl: process.env.APP_BASE_URL,
     emailSender,
+    packGovernanceRepo,
+    platformAdmins,
     devAuth: process.env.DEV_AUTH === '1',
   })
 

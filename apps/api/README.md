@@ -33,6 +33,7 @@ stand-in trusts the `x-user-email` header.
 | `STRIPE_WEBHOOK_SECRET` | Enables `POST /webhooks/stripe` (503s without it) |
 | `RESEND_API_KEY` + `EMAIL_FROM` | Send invite emails via Resend instead of logging them |
 | `APP_BASE_URL` | Absolute base for links in emails and billing redirects |
+| `PLATFORM_ADMIN_EMAILS` | Comma-separated allowlist for the `/admin/packs` governance routes |
 
 ## Routes
 
@@ -48,7 +49,9 @@ stand-in trusts the `x-user-email` header.
 | `GET /api/v1/billing` | Current plan, status, trial/renewal date, plan limits, and live usage (entities, seats) |
 | `POST /api/v1/billing/checkout`, `POST /api/v1/billing/portal` | Owner-only — a provider redirect URL to upgrade / manage the subscription |
 | `POST /webhooks/stripe` | Raw body, signature-verified, no session — moves `plan` / `status` / `current_period_end` |
-| `GET /api/v1/packs`, `GET /api/v1/packs/:packKey` | Installed control packs + validation status (registry-backed, ADR 0005) |
+| `GET /api/v1/packs`, `GET /api/v1/packs/:packKey` | Installed control packs + validation status (registry-backed, ADR 0005); `status` is the governed status, `onDiskStatus` the manifest's |
+| `GET /api/v1/admin/packs` | Platform admin — per-pack governance: checksum, issues, reviews, activation, effective status, drift, blockers |
+| `POST /api/v1/admin/packs/:packKey/reviews` / `/activate` / `/withdraw` | Platform admin — record a review against the current checksum / activate (needs valid + 2 reviewers) / withdraw |
 | `POST /api/v1/entities` | ENT-001 — create a regulated entity; records scope facts, pack + snapshot, per-control applicability, actor, time, and a reproducibility hash (AC-003) |
 | `GET /api/v1/entities` | Every entity in the workspace with its current snapshot + readiness roll-up (`entityStatus`, `readinessCounts`), newest first — the dashboard feed |
 | `GET /api/v1/entities/:id/matrix` | MAT-001 — per-control applicability + readiness, approved value, entity status, honest counts (AC-004) |
