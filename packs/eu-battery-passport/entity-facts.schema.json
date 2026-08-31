@@ -1,0 +1,49 @@
+{
+  "packKey": "eu-battery-passport",
+  "facts": [
+    {
+      "name": "entityKind",
+      "type": "enum",
+      "enumValues": ["product", "service"],
+      "required": true,
+      "description": "A battery is a product; the service value is treated as out of scope."
+    },
+    {
+      "name": "placedOnMarketInEU",
+      "type": "boolean",
+      "required": true,
+      "description": "Is the battery placed on the EU market or put into service in the EU?"
+    },
+    {
+      "name": "batteryCategory",
+      "type": "enum",
+      "enumValues": ["portable", "lmt", "industrial", "ev", "sli"],
+      "required": true,
+      "description": "Battery category under Regulation (EU) 2023/1542 Art. 3. LMT = light means of transport; SLI = starting, lighting, ignition."
+    },
+    {
+      "name": "ratedCapacityGt2kWh",
+      "type": "boolean",
+      "required": true,
+      "description": "Does an industrial battery have a rated capacity greater than 2 kWh?"
+    },
+    {
+      "name": "containsCobaltNickelLithiumLead",
+      "type": "boolean",
+      "required": true,
+      "description": "Does the active material contain cobalt, nickel, lithium or lead?"
+    },
+    {
+      "name": "belowDueDiligenceThreshold",
+      "type": "boolean",
+      "required": true,
+      "description": "Is the economic operator below the net-turnover threshold that triggers the supply-chain due-diligence obligation (Art. 48)?"
+    },
+    {
+      "name": "ratedCapacityWh",
+      "type": "number",
+      "required": false,
+      "description": "Rated capacity in watt-hours (informational)."
+    }
+  ]
+}

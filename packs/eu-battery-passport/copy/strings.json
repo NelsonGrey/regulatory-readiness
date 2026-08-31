@@ -1,0 +1,19 @@
+{
+  "packKey": "eu-battery-passport",
+  "limitationStatement": "This is a preparation and evidence record, not a certification, a conformity assessment, or a legal opinion. It does not guarantee that a market-surveillance authority will agree. Responsibility for compliance with Regulation (EU) 2023/1542 (the Batteries Regulation) remains with the economic operator.",
+  "forbiddenPhrases": [
+    "Batteries Regulation certified",
+    "battery passport certified",
+    "fully compliant",
+    "compliant battery",
+    "guaranteed conformity",
+    "legally compliant",
+    "audit passed",
+    "meets all requirements",
+    "instantly compliant"
+  ],
+  "verdict": {
+    "ready": "Based on our preparation record, this battery has the passport data elements checked under Regulation (EU) 2023/1542 in place, as of snapshot {snapshotKey} ({date}).",
+    "notReady": "This battery is missing or has not yet evidenced some of the passport data elements checked under Regulation (EU) 2023/1542. Known gaps are listed below."
+  }
+}

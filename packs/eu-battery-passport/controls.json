@@ -1,0 +1,69 @@
+{
+  "packKey": "eu-battery-passport",
+  "controls": [
+    {
+      "key": "BATT-ID-UNIQUE-IDENTIFIER",
+      "title": "A unique battery identifier and a data carrier (QR code) are on the battery and link to the passport",
+      "family": "identification",
+      "fieldFamily": "id-check",
+      "standardClause": "Art. 77 / Annex XIII",
+      "evidenceExpectation": "Photo or drawing of the marked identifier and QR code, plus the resolvable passport URL for one production sample."
+    },
+    {
+      "key": "BATT-ID-BASIC-CHARACTERISTICS",
+      "title": "Manufacturer, battery category, weight, capacity and chemistry are disclosed in the passport",
+      "family": "identification",
+      "fieldFamily": "id-check",
+      "standardClause": "Annex XIII(1)",
+      "evidenceExpectation": "Export of the passport record showing each declared field with its source system and last-updated date."
+    },
+    {
+      "key": "BATT-CF-DECLARATION",
+      "title": "A carbon footprint declaration per functional unit is available",
+      "family": "carbon-footprint",
+      "fieldFamily": "declaration",
+      "standardClause": "Art. 7(1)",
+      "evidenceExpectation": "The signed carbon-footprint declaration (kg CO2e per kWh over the service life) with the calculation method and dataset references."
+    },
+    {
+      "key": "BATT-CF-PERFORMANCE-CLASS",
+      "title": "The carbon footprint performance class label is applied",
+      "family": "carbon-footprint",
+      "fieldFamily": "declaration",
+      "standardClause": "Art. 7(2)",
+      "evidenceExpectation": "The label artwork with the assigned class and the delegated-act threshold table used to assign it."
+    },
+    {
+      "key": "BATT-MAT-RECYCLED-CONTENT",
+      "title": "Recycled cobalt, nickel, lithium and lead content is disclosed",
+      "family": "materials",
+      "fieldFamily": "disclosure",
+      "standardClause": "Art. 8",
+      "evidenceExpectation": "The recycled-content declaration per metal with the third-party verification statement."
+    },
+    {
+      "key": "BATT-PERF-SOH-DATA",
+      "title": "State-of-health and expected lifetime data are available in the passport",
+      "family": "performance-durability",
+      "fieldFamily": "data-availability",
+      "standardClause": "Annex XIII(3)",
+      "evidenceExpectation": "A sample passport export showing the SoH parameters and the update mechanism (BMS field, API, or manual)."
+    },
+    {
+      "key": "BATT-DD-POLICY",
+      "title": "A supply-chain due-diligence policy is published and a report is available",
+      "family": "due-diligence",
+      "fieldFamily": "policy-doc",
+      "standardClause": "Art. 48-53",
+      "evidenceExpectation": "The published due-diligence policy and the most recent third-party-verified due-diligence report."
+    },
+    {
+      "key": "BATT-EOL-COLLECTION-INFO",
+      "title": "Separate-collection marking and end-of-life information are provided",
+      "family": "end-of-life",
+      "fieldFamily": "labelling",
+      "standardClause": "Art. 13 / Annex VI",
+      "evidenceExpectation": "The crossed-out wheeled-bin marking, the substance symbols where required, and the take-back information given to end users."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "packKey": "eu-battery-passport",
+  "title": "EU Batteries Regulation (2023/1542) — battery passport data",
+  "sourceAuthority": "European Union / European Commission",
+  "jurisdiction": "EU",
+  "sourceUrls": ["https://eur-lex.europa.eu/eli/reg/2023/1542/oj"],
+  "publicationDate": "2023-07-28",
+  "retrievedDate": "TBD",
+  "sourceChecksum": "sha256:UNVERIFIED",
+  "catalogVersion": "0.1.0",
+  "snapshotKey": "BATT-EU-2023-1542-V1-DRAFT",
+  "effectiveDates": [{ "label": "Battery passport requirement applies", "date": "2027-02-18" }],
+  "supersedes": null,
+  "supersededBy": null,
+  "status": "draft",
+  "review": { "reviewers": [], "reviewedAt": null, "sourceSetHash": null }
+}

@@ -1,0 +1,84 @@
+{
+  "packKey": "eu-battery-passport",
+  "controlCount": 8,
+  "applicability": [
+    {
+      "name": "EV battery on the EU market, contains critical metals, large operator",
+      "snapshotKey": "BATT-EU-2023-1542-V1-DRAFT",
+      "facts": {
+        "entityKind": "product",
+        "placedOnMarketInEU": true,
+        "batteryCategory": "ev",
+        "ratedCapacityGt2kWh": true,
+        "containsCobaltNickelLithiumLead": true,
+        "belowDueDiligenceThreshold": false
+      },
+      "expect": [
+        { "control": "BATT-ID-UNIQUE-IDENTIFIER", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "BATT-CF-DECLARATION", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "BATT-CF-PERFORMANCE-CLASS", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "BATT-MAT-RECYCLED-CONTENT", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "BATT-PERF-SOH-DATA", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "BATT-DD-POLICY", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "BATT-EOL-COLLECTION-INFO", "result": "REQUIRED_BY_SNAPSHOT" }
+      ]
+    },
+    {
+      "name": "Portable battery, no critical metals, operator below the due-diligence threshold",
+      "snapshotKey": "BATT-EU-2023-1542-V1-DRAFT",
+      "facts": {
+        "entityKind": "product",
+        "placedOnMarketInEU": true,
+        "batteryCategory": "portable",
+        "ratedCapacityGt2kWh": false,
+        "containsCobaltNickelLithiumLead": false,
+        "belowDueDiligenceThreshold": true
+      },
+      "expect": [
+        { "control": "BATT-ID-UNIQUE-IDENTIFIER", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "BATT-EOL-COLLECTION-INFO", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "BATT-CF-DECLARATION", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" },
+        { "control": "BATT-CF-PERFORMANCE-CLASS", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" },
+        { "control": "BATT-PERF-SOH-DATA", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" },
+        { "control": "BATT-MAT-RECYCLED-CONTENT", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" },
+        { "control": "BATT-DD-POLICY", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" }
+      ]
+    },
+    {
+      "name": "LMT battery — the performance-class label is optional, the declaration is not",
+      "snapshotKey": "BATT-EU-2023-1542-V1-DRAFT",
+      "facts": {
+        "entityKind": "product",
+        "placedOnMarketInEU": true,
+        "batteryCategory": "lmt",
+        "ratedCapacityGt2kWh": false,
+        "containsCobaltNickelLithiumLead": true,
+        "belowDueDiligenceThreshold": false
+      },
+      "expect": [
+        { "control": "BATT-CF-DECLARATION", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "BATT-CF-PERFORMANCE-CLASS", "result": "OPTIONAL_IF_AVAILABLE" },
+        { "control": "BATT-PERF-SOH-DATA", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "BATT-MAT-RECYCLED-CONTENT", "result": "REQUIRED_BY_SNAPSHOT" },
+        { "control": "BATT-DD-POLICY", "result": "REQUIRED_BY_SNAPSHOT" }
+      ]
+    },
+    {
+      "name": "Battery not placed on the EU market",
+      "snapshotKey": "BATT-EU-2023-1542-V1-DRAFT",
+      "facts": {
+        "entityKind": "product",
+        "placedOnMarketInEU": false,
+        "batteryCategory": "ev",
+        "ratedCapacityGt2kWh": true,
+        "containsCobaltNickelLithiumLead": true,
+        "belowDueDiligenceThreshold": false
+      },
+      "expect": [
+        { "control": "BATT-ID-UNIQUE-IDENTIFIER", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" },
+        { "control": "BATT-CF-DECLARATION", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" },
+        { "control": "BATT-DD-POLICY", "result": "NOT_APPLICABLE_TO_CLASSIFICATION" }
+      ]
+    }
+  ]
+}

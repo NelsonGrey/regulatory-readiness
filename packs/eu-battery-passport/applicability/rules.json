@@ -1,0 +1,86 @@
+{
+  "packKey": "eu-battery-passport",
+  "defaultResult": "REQUIRED_BY_SNAPSHOT",
+  "rules": [
+    {
+      "id": "service-out-of-scope",
+      "description": "A battery passport applies to products, not services.",
+      "when": { "fact": "entityKind", "eq": "service" },
+      "target": "*",
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "The battery passport applies to a product, not a service."
+    },
+    {
+      "id": "not-on-eu-market",
+      "description": "Battery is not placed on the EU market.",
+      "when": { "fact": "placedOnMarketInEU", "eq": false },
+      "target": "*",
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "Not placed on the EU market or put into service in the EU."
+    },
+    {
+      "id": "cf-performance-class-optional-for-lmt",
+      "description": "For LMT batteries the performance-class label is encouraged; the declaration itself stays mandatory.",
+      "when": { "fact": "batteryCategory", "eq": "lmt" },
+      "target": { "controls": ["BATT-CF-PERFORMANCE-CLASS"] },
+      "result": "OPTIONAL_IF_AVAILABLE",
+      "reason": "LMT batteries: the carbon-footprint performance class is provided where available."
+    },
+    {
+      "id": "carbon-footprint-scope",
+      "description": "Carbon-footprint disclosure covers EV, LMT and industrial batteries above 2 kWh.",
+      "when": {
+        "not": {
+          "any": [
+            { "fact": "batteryCategory", "in": ["ev", "lmt"] },
+            {
+              "all": [
+                { "fact": "batteryCategory", "eq": "industrial" },
+                { "fact": "ratedCapacityGt2kWh", "eq": true }
+              ]
+            }
+          ]
+        }
+      },
+      "target": { "family": "carbon-footprint" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "Carbon-footprint disclosure applies to EV, LMT and >2 kWh industrial batteries."
+    },
+    {
+      "id": "soh-data-scope",
+      "description": "State-of-health data covers EV, LMT and industrial batteries above 2 kWh.",
+      "when": {
+        "not": {
+          "any": [
+            { "fact": "batteryCategory", "in": ["ev", "lmt"] },
+            {
+              "all": [
+                { "fact": "batteryCategory", "eq": "industrial" },
+                { "fact": "ratedCapacityGt2kWh", "eq": true }
+              ]
+            }
+          ]
+        }
+      },
+      "target": { "family": "performance-durability" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "SoH and lifetime data apply to EV, LMT and >2 kWh industrial batteries."
+    },
+    {
+      "id": "recycled-content-scope",
+      "description": "Recycled-content disclosure only applies when the listed metals are present.",
+      "when": { "not": { "fact": "containsCobaltNickelLithiumLead", "eq": true } },
+      "target": { "family": "materials" },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "The active material does not contain cobalt, nickel, lithium or lead."
+    },
+    {
+      "id": "due-diligence-threshold",
+      "description": "The due-diligence obligation only applies above the net-turnover threshold.",
+      "when": { "fact": "belowDueDiligenceThreshold", "eq": true },
+      "target": { "controls": ["BATT-DD-POLICY"] },
+      "result": "NOT_APPLICABLE_TO_CLASSIFICATION",
+      "reason": "Below the net-turnover threshold for the supply-chain due-diligence obligation (Art. 48)."
+    }
+  ]
+}

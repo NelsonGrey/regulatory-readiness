@@ -80,6 +80,14 @@ describe('loadInstalledPacks', () => {
     expect(eaa?.manifest?.status).toBe('draft')
   })
 
+  it('discovers and validates the eu-battery-passport pack', async () => {
+    const installed = await loadInstalledPacks(PACKS_ROOT)
+    const batt = installed.find((p) => p.packKey === 'eu-battery-passport')
+    expect(batt).toBeDefined()
+    expect(batt?.valid).toBe(true)
+    expect(batt?.loaded?.controls).toHaveLength(8)
+  })
+
   it('returns [] for a missing directory', async () => {
     expect(await loadInstalledPacks('/no/such/path')).toEqual([])
   })
