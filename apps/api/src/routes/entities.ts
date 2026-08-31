@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
-import { CreateEntityRequest } from '@rre/contracts'
+import { CreateEntityRequest, ReEvaluateRequest } from '@rre/contracts'
 import { authFromRequest } from '../auth.js'
 import type { EntityService } from '../services/entities.js'
 
@@ -59,6 +59,35 @@ export async function registerEntityRoutes(
         version: result.evaluation.version,
       },
     })
+  })
+
+  app.post('/entities/:id/re-evaluate', async (req, reply) => {
+    const auth = authFromRequest(req)
+    if (!auth) return reply.code(401).send(NO_TENANT)
+    const parsed = ReEvaluateRequest.safeParse(req.body ?? {})
+    if (!parsed.success) {
+      return reply.code(422).send({
+        error: {
+          code: 'INVALID_BODY',
+          message: 'invalid request body',
+          details: parsed.error.issues,
+        },
+      })
+    }
+    const { id } = req.params as { id: string }
+    const result = await opts.entities.reEvaluate(auth, id, parsed.data)
+    if (!result.ok) {
+      const status =
+        result.code === 'ENTITY_NOT_FOUND' ? 404 : result.code === 'INVALID_FACTS' ? 422 : 409
+      return reply.code(status).send({
+        error: {
+          code: result.code,
+          message: result.message,
+          issues: 'issues' in result ? result.issues : undefined,
+        },
+      })
+    }
+    return reply.code(201).send(result)
   })
 
   app.get('/entities/:id/matrix', async (req, reply) => {

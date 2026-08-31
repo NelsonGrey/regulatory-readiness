@@ -87,3 +87,77 @@ describe('EntityService.create', () => {
     expect(a.ok && b.ok && a.evaluation.hash === b.evaluation.hash).toBe(true)
   })
 })
+
+describe('EntityService.reEvaluate', () => {
+  it('re-runs applicability with corrected facts, bumps the version, and diffs the change', async () => {
+    const { service, stores } = await setup()
+    const created = await service.create(auth, bankRequest)
+    if (!created.ok) throw new Error()
+    const entityId = created.entity.id
+
+    // adding a claim so we can prove evidence survives a re-evaluation
+    stores.claims.push({
+      id: 'clm_x',
+      tenantId: 't-demo',
+      entityId,
+      controlKey: 'EAA-EN549-9-1-1-1',
+      packKey: 'eaa-accessibility',
+      origin: 'INTERNAL_ASSERTION',
+      revision: 1,
+      supersedesClaimId: null,
+      status: 'APPROVED',
+      value: 'v',
+      unit: null,
+      methodContext: null,
+      asOfDate: null,
+      note: null,
+      evidenceUrl: null,
+      assertedBy: 'tester',
+      assertedAt: '2026-08-31T00:00:00.000Z',
+    })
+
+    // the site drops its website — the Web:* controls should stop applying
+    const res = await service.reEvaluate(auth, entityId, { facts: { hasWebsite: false } })
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.version).toBe(2)
+    expect(res.diff.applicabilityChanged.length).toBeGreaterThan(0)
+    expect(
+      res.diff.applicabilityChanged.some((c) => c.to === 'NOT_APPLICABLE_TO_CLASSIFICATION'),
+    ).toBe(true)
+
+    // the claim is untouched, and the entity now points at v2
+    expect(stores.claims).toHaveLength(1)
+    const cur = await service.matrix(auth, entityId)
+    expect(cur?.evaluation.version).toBe(2)
+    // the prior evaluation still exists
+    expect([...stores.evaluations.values()].filter((e) => e.entityId === entityId)).toHaveLength(2)
+
+    expect(stores.audit.map((a) => a.action)).toContain('entity.re_evaluated')
+  })
+
+  it('re-evaluating with no fact change reports an empty diff', async () => {
+    const { service } = await setup()
+    const created = await service.create(auth, bankRequest)
+    if (!created.ok) throw new Error()
+    const res = await service.reEvaluate(auth, created.entity.id, {})
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.diff).toMatchObject({ added: [], removed: [], applicabilityChanged: [] })
+  })
+
+  it('rejects invalid corrected facts and an unknown entity', async () => {
+    const { service } = await setup()
+    const created = await service.create(auth, bankRequest)
+    if (!created.ok) throw new Error()
+    expect(await service.reEvaluate(auth, 'ent_x', {})).toMatchObject({
+      ok: false,
+      code: 'ENTITY_NOT_FOUND',
+    })
+    expect(
+      await service.reEvaluate(auth, created.entity.id, {
+        facts: { offeredToConsumersInIE: 'yes-please' as unknown as boolean },
+      }),
+    ).toMatchObject({ ok: false, code: 'INVALID_FACTS' })
+  })
+})

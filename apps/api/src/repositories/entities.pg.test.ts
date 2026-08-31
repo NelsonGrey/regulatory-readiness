@@ -699,6 +699,35 @@ suite('Postgres unit of work + RLS (integration)', () => {
     )
   })
 
+  it('re-evaluation adds a new version and moves the entity pointer, keeping the old one', async () => {
+    await uow('t-alpha', (u) =>
+      u.entities.create(makeEntity('t-alpha', 'ere'), makeEvaluation('t-alpha', 'ere')),
+    )
+
+    await uow('t-alpha', (u) =>
+      u.entities.reEvaluate('ere', {
+        ...makeEvaluation('t-alpha', 'ere'),
+        id: 'ere-eval-2',
+        version: 2,
+        results: [
+          { control: 'C-1', result: 'NOT_APPLICABLE_TO_CLASSIFICATION' },
+          { control: 'C-2', result: 'REQUIRED_BY_SNAPSHOT' },
+        ],
+        hash: 'sha256:v2',
+      }),
+    )
+
+    const got = await uow('t-alpha', (u) => u.entities.get('ere'))
+    expect(got?.evaluation.id).toBe('ere-eval-2')
+    expect(got?.evaluation.version).toBe(2)
+    expect(got?.evaluation.results).toHaveLength(2)
+
+    const count = await withTenant(appPool, 't-alpha', (c) =>
+      c.query(`SELECT count(*)::int AS n FROM entity_scope_evaluation WHERE entity_id = 'ere'`),
+    )
+    expect(count.rows[0].n).toBe(2)
+  })
+
   it('isolates evaluations by pack_key within a tenant', async () => {
     await uow('t-alpha', async (u) => {
       await u.entities.create(makeEntity('t-alpha', 'e5'), makeEvaluation('t-alpha', 'e5'))

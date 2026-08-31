@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactElement } from 're
 import { Link, useParams } from 'react-router-dom'
 import { ApplicabilityChip, ReadinessChip } from '@rre/ui'
 import { api, ApiError } from '../api/client.js'
-import type { EntityMatrix, MatrixRow } from '../api/types.js'
+import type { EntityMatrix, MatrixRow, ReEvaluateResponse } from '../api/types.js'
 import { AddClaimForm } from '../components/AddClaimForm.js'
 import { OverrideForm } from '../components/OverrideForm.js'
 
@@ -33,6 +33,8 @@ export function MatrixPage(): ReactElement {
   const [activeControl, setActiveControl] = useState<string | null>(null)
   const [overrideControl, setOverrideControl] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
+  const [reEvalBusy, setReEvalBusy] = useState(false)
+  const [reEval, setReEval] = useState<ReEvaluateResponse | null>(null)
 
   const load = useCallback(() => {
     let live = true
@@ -54,6 +56,19 @@ export function MatrixPage(): ReactElement {
   }, [id])
 
   useEffect(() => load(), [load, version])
+
+  async function reevaluate(): Promise<void> {
+    setReEvalBusy(true)
+    try {
+      const res = await api.post<ReEvaluateResponse>(`/entities/${id}/re-evaluate`, {})
+      setReEval(res)
+      setVersion((v) => v + 1)
+    } catch {
+      /* surfaced via the matrix error state on the refetch, if any */
+    } finally {
+      setReEvalBusy(false)
+    }
+  }
 
   const rows = useMemo<MatrixRow[]>(
     () =>
@@ -116,6 +131,40 @@ export function MatrixPage(): ReactElement {
           </dd>
         </div>
       </dl>
+
+      <div className="rre-actions">
+        <button type="button" className="rre-secondary" disabled={reEvalBusy} onClick={reevaluate}>
+          {reEvalBusy ? 'Re-evaluating…' : 'Re-evaluate applicability'}
+        </button>
+      </div>
+
+      {reEval ? (
+        <div className="rre-panel" role="status">
+          <h3>Re-evaluated to v{reEval.version}</h3>
+          {reEval.diff.added.length === 0 &&
+          reEval.diff.removed.length === 0 &&
+          reEval.diff.applicabilityChanged.length === 0 ? (
+            <p className="rre-note">Nothing changed — applicability is the same.</p>
+          ) : (
+            <>
+              <p className="rre-note">
+                {reEval.diff.added.length} added · {reEval.diff.removed.length} removed ·{' '}
+                {reEval.diff.applicabilityChanged.length} applicability change(s). Claims and
+                evidence are unchanged.
+              </p>
+              {reEval.diff.applicabilityChanged.length > 0 ? (
+                <ul className="rre-list">
+                  {reEval.diff.applicabilityChanged.map((c) => (
+                    <li key={c.control}>
+                      <code>{c.control}</code>: {c.from} → {c.to}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          )}
+        </div>
+      ) : null}
 
       <p className="rre-denominator">
         {matrix.summary.requiredNow} of {matrix.summary.total} controls are required by this

@@ -18,6 +18,12 @@ export const CreateEntityRequest = z.object({
 })
 export type CreateEntityRequest = z.infer<typeof CreateEntityRequest>
 
+/** POST /api/v1/entities/:id/re-evaluate — re-run applicability, optionally with corrected facts. */
+export const ReEvaluateRequest = z.object({
+  facts: z.record(z.union([z.string(), z.number(), z.boolean()])).optional(),
+})
+export type ReEvaluateRequest = z.infer<typeof ReEvaluateRequest>
+
 export const ClaimOrigin = z.enum([
   'SUPPLIER_ASSERTION',
   'INTERNAL_ASSERTION',

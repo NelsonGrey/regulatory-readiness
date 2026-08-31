@@ -267,6 +267,7 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
   return async (tenantId, fn) => {
     const stagedEntities: RegulatedEntity[] = []
     const stagedEvaluations: EntityScopeEvaluation[] = []
+    const entityEvalPointer = new Map<string, string>()
     const stagedAudit: AuditRecord[] = []
     const stagedOutbox: OutboxRecord[] = []
     const stagedClaims: ClaimRecord[] = []
@@ -692,12 +693,22 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
         stagedEntities.push(entity)
         stagedEvaluations.push(evaluation)
       },
+      async reEvaluate(entityId, evaluation) {
+        if (evaluation.tenantId !== tenantId) throw new Error('unit-of-work tenant mismatch')
+        stagedEvaluations.push(evaluation)
+        entityEvalPointer.set(entityId, evaluation.id)
+      },
       async get(id) {
-        const entity = stores.entities.get(id) ?? stagedEntities.find((e) => e.id === id) ?? null
-        if (!entity || entity.tenantId !== tenantId) return null
+        const stored = stores.entities.get(id) ?? stagedEntities.find((e) => e.id === id) ?? null
+        if (!stored || stored.tenantId !== tenantId) return null
+        const currentEvalId = entityEvalPointer.get(id) ?? stored.currentEvaluationId
+        const entity =
+          currentEvalId === stored.currentEvaluationId
+            ? stored
+            : { ...stored, currentEvaluationId: currentEvalId }
         const evaluation =
-          stores.evaluations.get(entity.currentEvaluationId) ??
-          stagedEvaluations.find((e) => e.id === entity.currentEvaluationId) ??
+          stores.evaluations.get(currentEvalId) ??
+          stagedEvaluations.find((e) => e.id === currentEvalId) ??
           null
         return evaluation ? { entity, evaluation } : null
       },
@@ -749,6 +760,10 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
 
     for (const e of stagedEntities) stores.entities.set(e.id, e)
     for (const e of stagedEvaluations) stores.evaluations.set(e.id, e)
+    for (const [entityId, evalId] of entityEvalPointer) {
+      const e = stores.entities.get(entityId)
+      if (e) e.currentEvaluationId = evalId
+    }
     for (const a of stagedAudit) {
       a.seq = String(stores.audit.length + 1)
       stores.audit.push(a)

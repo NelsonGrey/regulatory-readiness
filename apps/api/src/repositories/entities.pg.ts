@@ -113,6 +113,32 @@ export class PgEntityRepository implements EntityRepository {
     )
   }
 
+  async reEvaluate(entityId: string, evaluation: EntityScopeEvaluation): Promise<void> {
+    await this.db.query(
+      `INSERT INTO entity_scope_evaluation
+         (id, entity_id, tenant_id, pack_key, snapshot_key, version,
+          facts, results, evaluated_at, evaluated_by, hash)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [
+        evaluation.id,
+        evaluation.entityId,
+        evaluation.tenantId,
+        evaluation.packKey,
+        evaluation.snapshotKey,
+        evaluation.version,
+        JSON.stringify(evaluation.facts),
+        JSON.stringify(evaluation.results),
+        evaluation.evaluatedAt,
+        evaluation.evaluatedBy,
+        evaluation.hash,
+      ],
+    )
+    await this.db.query(
+      `UPDATE regulated_entity SET current_evaluation_id = $1 WHERE id = $2 AND tenant_id = $3`,
+      [evaluation.id, entityId, this.tenantId],
+    )
+  }
+
   async get(
     id: string,
   ): Promise<{ entity: RegulatedEntity; evaluation: EntityScopeEvaluation } | null> {

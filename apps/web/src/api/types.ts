@@ -238,6 +238,21 @@ export interface InitiateUploadResponse {
   objectKey: string
 }
 
+export interface EvaluationDiff {
+  added: string[]
+  removed: string[]
+  applicabilityChanged: Array<{ control: string; from: string; to: string }>
+  unchanged: number
+}
+
+export interface ReEvaluateResponse {
+  ok: true
+  evaluationId: string
+  version: number
+  snapshotKey: string
+  diff: EvaluationDiff
+}
+
 export interface ExtractionRun {
   id: string
   documentId: string

@@ -190,6 +190,57 @@ describe('MatrixPage', () => {
     expect(await screen.findByText(/overridden from REQUIRED_BY_SNAPSHOT/i)).toBeInTheDocument()
   })
 
+  it('re-evaluates applicability and shows the change summary', async () => {
+    const user = userEvent.setup()
+    let calls = 0
+    const bumped = { ...matrix, evaluation: { ...matrix.evaluation, version: 2 } }
+    const { calls: recorded } = mockApi([
+      {
+        path: '/api/v1/entities/ent_1/matrix',
+        method: 'GET',
+        get body() {
+          return calls++ === 0 ? matrix : bumped
+        },
+      },
+      {
+        path: '/api/v1/entities/ent_1/re-evaluate',
+        method: 'POST',
+        status: 201,
+        body: {
+          ok: true,
+          evaluationId: 'eval_2',
+          version: 2,
+          snapshotKey: 'EAA-IE-EN549-V3.2.1-DRAFT',
+          diff: {
+            added: [],
+            removed: ['EAA-9-2-4-11'],
+            applicabilityChanged: [
+              {
+                control: 'EAA-9-2-1-1',
+                from: 'REQUIRED_BY_SNAPSHOT',
+                to: 'NOT_APPLICABLE_TO_CLASSIFICATION',
+              },
+            ],
+            unchanged: 2,
+          },
+        },
+      },
+    ])
+
+    renderRoute('/w/entities/ent_1/matrix')
+    await screen.findByRole('table')
+
+    await user.click(screen.getByRole('button', { name: /re-evaluate applicability/i }))
+
+    await waitFor(() => {
+      expect(recorded.some((c) => c.method === 'POST' && c.url.endsWith('/re-evaluate'))).toBe(true)
+    })
+    const banner = (await screen.findByText(/re-evaluated to v2/i)).closest('.rre-panel')!
+    expect(banner.textContent).toMatch(/0 added · 1 removed · 1 applicability change/i)
+    expect(banner.textContent).toContain('EAA-9-2-1-1')
+    expect(banner.textContent).toContain('REQUIRED_BY_SNAPSHOT → NOT_APPLICABLE_TO_CLASSIFICATION')
+  })
+
   it('shows a not-found message for an unknown entity', async () => {
     mockApi([
       {

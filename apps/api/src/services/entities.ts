@@ -3,12 +3,14 @@ import type { CreateEntityRequest } from '@rre/contracts'
 import { evaluateApplicability, validateEntityFacts, type FactIssue } from '@rre/control-catalog'
 import {
   canonicalJson,
+  diffEvaluations,
   readinessForEntity,
   summariseApplicability,
   type ApplicabilitySummary,
   type EntityFacts,
   type EntityScopeEvaluation,
   type EntityStatus,
+  type EvaluationDiff,
   type EvaluationDigestInput,
   type ReadinessCounts,
   type RegulatedEntity,
@@ -28,6 +30,8 @@ function computeEvaluationHash(input: EvaluationDigestInput): string {
 export interface EntityRepository {
   create(entity: RegulatedEntity, evaluation: EntityScopeEvaluation): Promise<void>
   get(id: string): Promise<{ entity: RegulatedEntity; evaluation: EntityScopeEvaluation } | null>
+  /** Persist a new scope evaluation and point the entity at it. Prior evaluations stay. */
+  reEvaluate(entityId: string, evaluation: EntityScopeEvaluation): Promise<void>
 }
 
 export type CreateEntityFailure =
@@ -163,6 +167,114 @@ export class EntityService {
         summary,
       })
       return { ok: true, entity, evaluation } satisfies CreateEntityResult
+    })
+  }
+
+  /**
+   * Re-run applicability for an entity — optionally with corrected scope facts,
+   * otherwise against the current pack rules — producing a new evaluation
+   * version. Claims and evidence hang off the entity + control key, so they are
+   * untouched. Returns a `ControlChange`-style diff of what moved (TRD §7.4).
+   */
+  async reEvaluate(
+    auth: AuthContext,
+    entityId: string,
+    input: { facts?: Record<string, string | number | boolean> } = {},
+    now: Date = new Date(),
+  ): Promise<
+    | {
+        ok: true
+        evaluationId: string
+        version: number
+        snapshotKey: string
+        diff: EvaluationDiff
+      }
+    | { ok: false; code: 'ENTITY_NOT_FOUND' | 'PACK_NOT_LOADED'; message: string }
+    | { ok: false; code: 'INVALID_FACTS'; message: string; issues: FactIssue[] }
+  > {
+    return this.uow(auth.tenantId, async (u) => {
+      const found = await u.entities.get(entityId)
+      if (!found) {
+        return { ok: false, code: 'ENTITY_NOT_FOUND', message: `entity ${entityId} not found` }
+      }
+      const pack = this.packs.get(found.entity.packKey)
+      if (!pack?.loaded || !pack.valid) {
+        return {
+          ok: false,
+          code: 'PACK_NOT_LOADED',
+          message: `pack "${found.entity.packKey}" is not valid`,
+        }
+      }
+
+      const facts: EntityFacts = {
+        ...found.evaluation.facts,
+        ...(input.facts ?? {}),
+        entityKind: found.entity.entityKind,
+      }
+      const issues = validateEntityFacts(pack.loaded.entityFacts, facts)
+      if (issues.length > 0) {
+        return { ok: false, code: 'INVALID_FACTS', message: 'entity facts are invalid', issues }
+      }
+
+      const snapshotKey = pack.loaded.manifest.snapshotKey
+      const controls = pack.loaded.controls.map((c) => ({ key: c.key, family: c.family }))
+      const results = evaluateApplicability(pack.loaded.applicability, controls, facts, {
+        snapshotKey,
+      })
+
+      const at = now.toISOString()
+      const evaluation: EntityScopeEvaluation = {
+        id: `eval_${randomUUID()}`,
+        entityId,
+        tenantId: auth.tenantId,
+        packKey: found.entity.packKey,
+        snapshotKey,
+        version: found.evaluation.version + 1,
+        facts,
+        results,
+        evaluatedAt: at,
+        evaluatedBy: auth.actor,
+        hash: computeEvaluationHash({
+          packKey: found.entity.packKey,
+          snapshotKey,
+          facts,
+          results,
+        }),
+      }
+      const diff = diffEvaluations(found.evaluation.results, results)
+
+      await u.entities.reEvaluate(entityId, evaluation)
+      await u.audit({
+        actorType: 'user',
+        actorId: auth.actor,
+        action: 'entity.re_evaluated',
+        targetType: 'regulated_entity',
+        targetId: entityId,
+        occurredAt: at,
+        metadata: {
+          fromVersion: found.evaluation.version,
+          toVersion: evaluation.version,
+          factsChanged: Boolean(input.facts && Object.keys(input.facts).length > 0),
+          added: diff.added.length,
+          removed: diff.removed.length,
+          applicabilityChanged: diff.applicabilityChanged.length,
+        },
+      })
+      await u.enqueue('entity.readiness_evaluated', {
+        entityId,
+        tenantId: auth.tenantId,
+        packKey: found.entity.packKey,
+        snapshotKey,
+        evaluationHash: evaluation.hash,
+      })
+
+      return {
+        ok: true,
+        evaluationId: evaluation.id,
+        version: evaluation.version,
+        snapshotKey,
+        diff,
+      }
     })
   }
 
