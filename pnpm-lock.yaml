@@ -47,6 +47,9 @@ importers:
       '@rre/control-catalog':
         specifier: workspace:*
         version: link:../../packages/control-catalog
+      '@rre/copy-guard':
+        specifier: workspace:*
+        version: link:../../packages/copy-guard
       '@rre/db':
         specifier: workspace:*
         version: link:../../packages/db

@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import type { Pool } from 'pg'
-import type { EntityScopeEvaluation, RegulatedEntity } from '@rre/domain'
+import type { CanonicalExport, EntityScopeEvaluation, RegulatedEntity } from '@rre/domain'
 import { createPool, migrate, withTenant } from '@rre/db'
 import { pgUnitOfWork, type UnitOfWork } from '../db/uow.js'
 import { pgResolveGrant } from './requests.pg.js'
@@ -66,7 +66,7 @@ suite('Postgres unit of work + RLS (integration)', () => {
     await adminPool.query(
       `TRUNCATE regulated_entity, entity_scope_evaluation, audit_event, outbox, claim,
         review_decision, evidence_request, request_item, access_token_grant,
-        contributor_submission, contributor_response_item, request_draft`,
+        contributor_submission, contributor_response_item, request_draft, readiness_snapshot`,
     )
   })
 
@@ -350,6 +350,49 @@ suite('Postgres unit of work + RLS (integration)', () => {
     // delete (what submit does) clears it
     await uow('t-alpha', (u) => u.requests.deleteDraft('req_d'))
     expect(await uow('t-alpha', (u) => u.requests.getDraft('req_d'))).toBeNull()
+  })
+
+  it('readiness_snapshot is RLS-scoped and append-only to the app role', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'es'), makeEvaluation('t-alpha', 'es'))
+      await u.snapshots.insert({
+        id: 'rsnap_1',
+        tenantId: 't-alpha',
+        entityId: 'es',
+        packKey: 'eaa-accessibility',
+        snapshotKey: 'SNAP-1',
+        evaluationId: 'es-eval',
+        entityStatus: 'REVIEW_NEEDED',
+        readinessCounts: { EVIDENCED: 0, MISSING: 1 },
+        document: {
+          schemaVersion: '1.0',
+          controls: [],
+          exceptions: [],
+        } as unknown as CanonicalExport,
+        contentHash: 'sha256:cafe',
+        createdBy: 'tester',
+        createdAt: AT,
+      })
+    })
+
+    const got = await uow('t-alpha', (u) => u.snapshots.get('rsnap_1'))
+    expect(got?.contentHash).toBe('sha256:cafe')
+    expect(await uow('t-alpha', (u) => u.snapshots.listByEntity('es'))).toHaveLength(1)
+
+    expect(await uow('t-bravo', (u) => u.snapshots.get('rsnap_1'))).toBeNull()
+    const bravoRows = await withTenant(appPool, 't-bravo', (c) =>
+      c.query('SELECT id FROM readiness_snapshot'),
+    )
+    expect(bravoRows.rows).toEqual([])
+
+    await expect(
+      withTenant(appPool, 't-alpha', (c) =>
+        c.query(`UPDATE readiness_snapshot SET content_hash = 'x'`),
+      ),
+    ).rejects.toThrow(/permission denied/i)
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query('DELETE FROM readiness_snapshot')),
+    ).rejects.toThrow(/permission denied/i)
   })
 
   it('isolates evaluations by pack_key within a tenant', async () => {

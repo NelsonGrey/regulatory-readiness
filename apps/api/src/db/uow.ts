@@ -5,8 +5,10 @@ import { withTenant } from '@rre/db'
 import { PgEntityRepository } from '../repositories/entities.pg.js'
 import { PgClaimRepository } from '../repositories/claims.pg.js'
 import { PgRequestRepository } from '../repositories/requests.pg.js'
+import { PgSnapshotRepository } from '../repositories/snapshots.pg.js'
 import type { EntityRepository } from '../services/entities.js'
 import type { ClaimRecord, ClaimRepository, ReviewDecisionRecord } from '../services/claims.js'
+import type { SnapshotRecord, SnapshotRepository } from '../services/snapshots.js'
 import type {
   AccessGrantRecord,
   DraftRecord,
@@ -68,6 +70,7 @@ export interface Uow {
   readonly entities: EntityRepository
   readonly claims: ClaimRepository
   readonly requests: RequestRepository
+  readonly snapshots: SnapshotRepository
   audit(event: AuditInput): Promise<void>
   enqueue(topic: string, payload: unknown): Promise<void>
   queryAudit(query: AuditQuery): Promise<AuditRecord[]>
@@ -85,6 +88,7 @@ export function pgUnitOfWork(pool: Pool): UnitOfWork {
         entities: new PgEntityRepository(client, tenantId),
         claims: new PgClaimRepository(client, tenantId),
         requests: new PgRequestRepository(client, tenantId),
+        snapshots: new PgSnapshotRepository(client, tenantId),
         async audit(ev) {
           await client.query(
             `INSERT INTO audit_event
@@ -187,6 +191,7 @@ export interface InMemoryStores {
   submissions: SubmissionRecord[]
   responseItems: ResponseItemRecord[]
   drafts: DraftRecord[]
+  snapshots: SnapshotRecord[]
 }
 
 export function createInMemoryStores(): InMemoryStores {
@@ -201,6 +206,7 @@ export function createInMemoryStores(): InMemoryStores {
     requestItems: [],
     grants: [],
     submissions: [],
+    snapshots: [],
     responseItems: [],
     drafts: [],
   }
@@ -227,6 +233,7 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
     const stagedGrants: AccessGrantRecord[] = []
     const stagedSubmissions: SubmissionRecord[] = []
     const stagedResponseItems: ResponseItemRecord[] = []
+    const stagedSnapshots: SnapshotRecord[] = []
     const requestStatusOverrides = new Map<string, RequestStatus>()
     const grantOverrides = new Map<string, { revokedAt?: string; usesInc?: number }>()
     const stagedDraftUpserts = new Map<string, DraftRecord>()
@@ -369,6 +376,24 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       },
     }
 
+    const allSnapshots = (): SnapshotRecord[] => [...stores.snapshots, ...stagedSnapshots]
+
+    const snapshots: SnapshotRepository = {
+      async insert(s) {
+        if (s.tenantId !== tenantId) throw new Error('unit-of-work tenant mismatch')
+        stagedSnapshots.push({ ...s })
+      },
+      async get(id) {
+        return allSnapshots().find((s) => s.id === id && s.tenantId === tenantId) ?? null
+      },
+      async listByEntity(entityId) {
+        return allSnapshots()
+          .filter((s) => s.tenantId === tenantId && s.entityId === entityId)
+          .map(({ document: _document, ...summary }) => summary)
+          .reverse()
+      },
+    }
+
     const entities: EntityRepository = {
       async create(entity, evaluation) {
         if (entity.tenantId !== tenantId || evaluation.tenantId !== tenantId) {
@@ -393,6 +418,7 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       entities,
       claims,
       requests,
+      snapshots,
       async audit(ev) {
         stagedAudit.push({
           id: `aud_${randomUUID()}`,
@@ -448,6 +474,7 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
     for (const g of stagedGrants) stores.grants.push(g)
     for (const s of stagedSubmissions) stores.submissions.push(s)
     for (const ri of stagedResponseItems) stores.responseItems.push(ri)
+    for (const s of stagedSnapshots) stores.snapshots.push(s)
     for (const [id, s] of requestStatusOverrides) {
       const r = stores.requests.find((x) => x.id === id)
       if (r) r.status = s

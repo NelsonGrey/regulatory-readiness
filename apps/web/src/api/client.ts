@@ -40,7 +40,26 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return json as T
 }
 
+async function requestText(path: string): Promise<string> {
+  const res = await fetch(BASE + path, {
+    method: 'GET',
+    headers: { 'x-tenant-id': getTenant(), 'x-actor': 'operator@local' },
+  })
+  const text = await res.text()
+  if (!res.ok) {
+    let body: { error?: ApiErrorShape } | null = null
+    try {
+      body = JSON.parse(text) as { error?: ApiErrorShape }
+    } catch {
+      body = null
+    }
+    throw new ApiError(res.status, body)
+  }
+  return text
+}
+
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body: unknown) => request<T>('POST', path, body),
+  getText: (path: string) => requestText(path),
 }

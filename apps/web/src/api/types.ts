@@ -190,6 +190,28 @@ export interface ContributorReceipt {
   note: string
 }
 
+export interface SnapshotSummary {
+  id: string
+  entityId: string
+  packKey: string
+  snapshotKey: string
+  evaluationId: string
+  entityStatus: EntityStatus
+  readinessCounts: ReadinessCounts
+  contentHash: string
+  createdBy: string
+  createdAt: string
+}
+
+export interface CreateSnapshotResponse {
+  id: string
+  contentHash: string
+  entityStatus: EntityStatus
+  snapshotKey: string
+  readinessCounts: ReadinessCounts
+  createdAt: string
+}
+
 export interface EntityMatrix {
   entity: {
     id: string

@@ -26,6 +26,9 @@ pnpm --filter @rre/api dev     # tsx watch, http://localhost:3000
 | `POST /api/v1/requests/:requestId/send`, `POST /api/v1/requests/:requestId/revoke` | Send / revoke a request's access token |
 | `POST /api/v1/requests/:requestId/resend` | Revoke live grants, mint a fresh link (returned once), reactivate a lapsed request (`DRAFT`/`EXPIRED`/`CANCELLED` → `SENT`) |
 | `POST /api/v1/submissions/:submissionId/items/:itemId/accept` | Pull one contributor response into the review queue as a `SUPPLIER_ASSERTION` claim |
+| `POST /api/v1/entities/:id/readiness-snapshots` | Freeze current readiness into an append-only snapshot (canonical document + `sha256:` content hash) |
+| `GET /api/v1/entities/:id/readiness-snapshots`, `GET /api/v1/readiness-snapshots/:id` | Snapshot list / full frozen document |
+| `GET /api/v1/readiness-snapshots/:id/export.json`, `.../export.csv` | Canonical JSON / control-matrix CSV, generated only from the frozen snapshot, served as an attachment |
 | `GET /contributor/v1/requests/:token` | SUP-001 — the requested controls + entity name only (plus any saved draft); no tenant header |
 | `PUT /contributor/v1/requests/:token/draft` | SUP-002 — save in-progress answers (mutable, one draft per request; cleared on submit) |
 | `POST /contributor/v1/requests/:token/submit` | SUP-003 — no-account submission (availability state per item); writes an immutable version, returns a receipt |
