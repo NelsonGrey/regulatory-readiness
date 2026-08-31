@@ -326,6 +326,69 @@ export class RequestService {
     })
   }
 
+  /**
+   * Revoke every live grant and mint a fresh one — the operator's "the link
+   * expired / was lost, send a new one" action. Reactivates a request that had
+   * lapsed (`DRAFT` / `EXPIRED` / `CANCELLED` → `SENT`). The plaintext token is
+   * returned exactly once, like `createRequest`.
+   */
+  async resend(
+    auth: AuthContext,
+    requestId: string,
+    input: { expiresInDays?: number } = {},
+    now: Date = new Date(),
+  ): Promise<
+    | { ok: true; token: string; grant: AccessGrantRecord; status: RequestStatus }
+    | { ok: false; code: 'NOT_FOUND' | 'CLOSED'; message: string }
+  > {
+    return this.uow(auth.tenantId, async (u) => {
+      const request = await u.requests.getRequest(requestId)
+      if (!request) return { ok: false, code: 'NOT_FOUND', message: 'request not found' }
+      if (request.status === 'CLOSED') {
+        return { ok: false, code: 'CLOSED', message: 'a closed request cannot be reissued' }
+      }
+
+      const at = now.toISOString()
+      for (const g of await u.requests.listGrantsByRequest(requestId)) {
+        if (!g.revokedAt) await u.requests.revokeGrant(g.id, at)
+      }
+
+      const issued = issueToken()
+      const grant: AccessGrantRecord = {
+        id: `tkn_${randomUUID()}`,
+        tenantId: auth.tenantId,
+        requestId,
+        tokenPrefix: issued.prefix,
+        tokenHash: issued.hash,
+        scope: 'contributor_submit',
+        expiresAt: new Date(now.getTime() + (input.expiresInDays ?? 14) * DAY_MS).toISOString(),
+        maxUses: null,
+        uses: 0,
+        revokedAt: null,
+        createdAt: at,
+      }
+      await u.requests.insertGrant(grant)
+
+      const reactivated =
+        request.status === 'DRAFT' || request.status === 'EXPIRED' || request.status === 'CANCELLED'
+      const status: RequestStatus = reactivated ? 'SENT' : request.status
+      if (reactivated) await u.requests.setRequestStatus(requestId, 'SENT')
+
+      await u.audit({
+        actorType: 'user',
+        actorId: auth.actor,
+        action: 'request.link_reissued',
+        targetType: 'evidence_request',
+        targetId: requestId,
+        occurredAt: at,
+        metadata: { tokenPrefix: issued.prefix, reactivated },
+      })
+      await u.enqueue('request.link_reissued', { requestId, entityId: request.entityId })
+
+      return { ok: true, token: issued.token, grant, status }
+    })
+  }
+
   async acceptResponseItem(
     auth: AuthContext,
     submissionId: string,

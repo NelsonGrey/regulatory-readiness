@@ -58,6 +58,12 @@ export const CreateRequestRequest = z.object({
 })
 export type CreateRequestRequest = z.infer<typeof CreateRequestRequest>
 
+/** POST /entities/:id/requests/:requestId/resend — revoke live grants, mint a new link. */
+export const ResendRequestRequest = z.object({
+  expiresInDays: z.number().int().positive().max(365).optional(),
+})
+export type ResendRequestRequest = z.infer<typeof ResendRequestRequest>
+
 export const AvailabilityState = z.enum([
   'VALUE_SUPPLIED',
   'UNAVAILABLE',

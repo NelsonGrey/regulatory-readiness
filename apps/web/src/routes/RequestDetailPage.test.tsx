@@ -99,6 +99,36 @@ describe('RequestDetailPage', () => {
     })
   })
 
+  it('reissues the link and shows the new URL once', async () => {
+    const user = userEvent.setup()
+    const { calls } = mockApi([
+      { path: '/api/v1/requests/req_abcdef123456', method: 'GET', body: detail() },
+      {
+        path: '/api/v1/requests/req_abcdef123456/resend',
+        method: 'POST',
+        status: 201,
+        body: {
+          token: 'tok_reissued_value',
+          tokenPrefix: 'tok_reis',
+          expiresAt: '2026-09-30T00:00:00.000Z',
+          status: 'SENT',
+          contributorPath: '/contributor/v1/requests/tok_reissued_value',
+        },
+      },
+    ])
+
+    renderRoute('/w/entities/ent_1/requests/req_abcdef123456')
+    await screen.findByText('alt text present on all images')
+
+    await user.click(screen.getByRole('button', { name: /reissue link/i }))
+
+    await waitFor(() => {
+      expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/resend'))).toBe(true)
+    })
+    expect(await screen.findByText(/new link — copy it now/i)).toBeInTheDocument()
+    expect(screen.getByText(/\/contribute\/tok_reissued_value$/)).toBeInTheDocument()
+  })
+
   it('renders a not-found message for an unknown request', async () => {
     mockApi([
       {

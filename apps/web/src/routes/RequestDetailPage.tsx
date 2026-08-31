@@ -18,6 +18,8 @@ export function RequestDetailPage(): ReactElement {
   const [version, setVersion] = useState(0)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [reissued, setReissued] = useState<{ token: string; expiresAt: string } | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const load = useCallback(() => {
     let live = true
@@ -53,6 +55,24 @@ export function RequestDetailPage(): ReactElement {
     }
   }
 
+  async function reissue(): Promise<void> {
+    setBusy('resend')
+    setError(null)
+    try {
+      const res = await api.post<{ token: string; expiresAt: string }>(
+        `/requests/${requestId}/resend`,
+        {},
+      )
+      setReissued({ token: res.token, expiresAt: res.expiresAt })
+      setCopied(false)
+      setVersion((v) => v + 1)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not reissue the link')
+    } finally {
+      setBusy('')
+    }
+  }
+
   async function accept(submissionId: string, itemId: string): Promise<void> {
     setBusy(itemId)
     setError(null)
@@ -73,6 +93,7 @@ export function RequestDetailPage(): ReactElement {
 
   const { request, items, grants, submissions } = detail
   const activeGrant = grants.find((g) => !g.revokedAt)
+  const contributorUrl = reissued ? `${window.location.origin}/contribute/${reissued.token}` : ''
 
   return (
     <section>
@@ -134,7 +155,41 @@ export function RequestDetailPage(): ReactElement {
             {busy === 'revoke' ? 'Revoking…' : 'Revoke link'}
           </button>
         ) : null}
+        {request.status !== 'CLOSED' ? (
+          <button
+            type="button"
+            className="rre-secondary"
+            disabled={busy === 'resend'}
+            onClick={reissue}
+          >
+            {busy === 'resend' ? 'Reissuing…' : activeGrant ? 'Reissue link' : 'Send a new link'}
+          </button>
+        ) : null}
       </div>
+
+      {reissued ? (
+        <div className="rre-panel" role="status">
+          <h3>New link — copy it now</h3>
+          <p className="rre-note">
+            The previous link no longer works. This one is shown once; it expires{' '}
+            {new Date(reissued.expiresAt).toLocaleDateString()}.
+          </p>
+          <p className="rre-token">
+            <code>{contributorUrl}</code>
+          </p>
+          <div className="rre-actions">
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard?.writeText(contributorUrl)
+                setCopied(true)
+              }}
+            >
+              {copied ? 'Copied' : 'Copy link'}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <h2>Requested controls</h2>
       <ul className="rre-list">

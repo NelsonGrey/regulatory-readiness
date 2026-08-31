@@ -23,6 +23,20 @@ Enabled when `RELAY_DATABASE_URL` and `SQS_EVENTS_QUEUE_URL` are set; runs on a
 `RELAY_INTERVAL_MS` timer (default 2s) in the worker process. In production this
 becomes an EventBridge-Scheduler-driven task.
 
+## Request expiry sweep (migration 0008)
+
+`sweepExpiredRequests()` moves evidence requests whose access links have all
+lapsed — no grant that is both unrevoked and unexpired — from a non-terminal
+status (`DRAFT` / `SENT` / `IN_PROGRESS`) to `EXPIRED`, and writes the
+`request.expired` audit event and outbox notification for each in the same
+transaction. The cross-tenant transition lives in a `SECURITY DEFINER` function
+(`expire_lapsed_requests`); the worker connects as `rre_app` (not `rre_relay`)
+and only holds `EXECUTE` on that one function. Idempotent and safe to run from
+multiple instances (`FOR UPDATE SKIP LOCKED`).
+
+Enabled when `APP_DATABASE_URL` is set; runs on an `EXPIRY_SWEEP_INTERVAL_MS`
+timer (default 60s).
+
 ## Queue handlers
 
 `src/handlers.ts` — one stub per SQS queue (scan-result, OCR, extraction, export,

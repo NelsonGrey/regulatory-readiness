@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
-import { CreateRequestRequest } from '@rre/contracts'
+import { CreateRequestRequest, ResendRequestRequest } from '@rre/contracts'
 import { authFromRequest } from '../auth.js'
 import type { RequestService } from '../services/requests.js'
 
@@ -79,6 +79,35 @@ export async function registerRequestRoutes(
     if (!ok)
       return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'request not found' } })
     return { ok: true }
+  })
+
+  app.post('/requests/:requestId/resend', async (req, reply) => {
+    const auth = authFromRequest(req)
+    if (!auth) return reply.code(401).send(NO_TENANT)
+    const parsed = ResendRequestRequest.safeParse(req.body ?? {})
+    if (!parsed.success) {
+      return reply.code(422).send({
+        error: {
+          code: 'INVALID_BODY',
+          message: 'invalid request body',
+          details: parsed.error.issues,
+        },
+      })
+    }
+    const { requestId } = req.params as { requestId: string }
+    const result = await opts.requests.resend(auth, requestId, parsed.data)
+    if (!result.ok) {
+      const code = result.code === 'NOT_FOUND' ? 404 : 409
+      return reply.code(code).send({ error: { code: result.code, message: result.message } })
+    }
+    // The plaintext token is returned exactly once.
+    return reply.code(201).send({
+      token: result.token,
+      tokenPrefix: result.grant.tokenPrefix,
+      expiresAt: result.grant.expiresAt,
+      status: result.status,
+      contributorPath: `/contributor/v1/requests/${result.token}`,
+    })
   })
 
   app.post('/submissions/:submissionId/items/:itemId/accept', async (req, reply) => {

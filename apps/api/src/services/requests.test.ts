@@ -73,6 +73,59 @@ describe('RequestService', () => {
   })
 })
 
+describe('RequestService.resend', () => {
+  let ctx: Awaited<ReturnType<typeof setup>>
+  let token: string
+  let requestId: string
+
+  beforeEach(async () => {
+    ctx = await setup()
+    const created = await ctx.requests.createRequest(auth, ctx.entityId, {
+      controlKeys: ['EAA-EN549-9-1-1-1'],
+    })
+    if (!created.ok) throw new Error('setup failed')
+    token = created.token
+    requestId = created.request.id
+  })
+
+  it('revokes the old link, issues a new usable one, and audits + notifies', async () => {
+    const res = await ctx.requests.resend(auth, requestId)
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+
+    expect(res.token).not.toBe(token)
+    // old link is dead, new link works
+    expect(await ctx.contributor.view(token)).toMatchObject({ ok: false, code: 'INVALID_LINK' })
+    expect(await ctx.contributor.view(res.token)).toMatchObject({ ok: true })
+
+    const grants = ctx.stores.grants.filter((g) => g.requestId === requestId)
+    expect(grants).toHaveLength(2)
+    expect(grants.filter((g) => !g.revokedAt)).toHaveLength(1)
+
+    expect(ctx.stores.audit.map((a) => a.action)).toContain('request.link_reissued')
+    expect(ctx.stores.outbox.map((o) => o.topic)).toContain('request.link_reissued')
+  })
+
+  it('reactivates a lapsed request (EXPIRED → SENT)', async () => {
+    ctx.stores.requests.find((r) => r.id === requestId)!.status = 'EXPIRED'
+    const res = await ctx.requests.resend(auth, requestId)
+    expect(res).toMatchObject({ ok: true, status: 'SENT' })
+    expect(ctx.stores.requests.find((r) => r.id === requestId)?.status).toBe('SENT')
+  })
+
+  it('refuses to reissue a closed request', async () => {
+    ctx.stores.requests.find((r) => r.id === requestId)!.status = 'CLOSED'
+    expect(await ctx.requests.resend(auth, requestId)).toMatchObject({ ok: false, code: 'CLOSED' })
+  })
+
+  it('404s an unknown request', async () => {
+    expect(await ctx.requests.resend(auth, 'req_nope')).toMatchObject({
+      ok: false,
+      code: 'NOT_FOUND',
+    })
+  })
+})
+
 describe('ContributorService drafts', () => {
   let ctx: Awaited<ReturnType<typeof setup>>
   let token: string
