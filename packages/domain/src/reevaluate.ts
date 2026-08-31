@@ -57,3 +57,23 @@ export function diffEvaluations(
 
 export const evaluationDiffIsEmpty = (d: EvaluationDiff): boolean =>
   d.added.length === 0 && d.removed.length === 0 && d.applicabilityChanged.length === 0
+
+export interface ControlSetDiff {
+  /** Control keys in `to` but not `from`. */
+  added: string[]
+  /** Control keys in `from` but not `to`. */
+  removed: string[]
+  /** Control keys present in both. */
+  retained: string[]
+}
+
+/** Diff two sets of control keys (a snapshot's control roster changing). */
+export function diffControlSets(from: readonly string[], to: readonly string[]): ControlSetDiff {
+  const fromSet = new Set(from)
+  const toSet = new Set(to)
+  return {
+    added: [...toSet].filter((k) => !fromSet.has(k)).sort(),
+    removed: [...fromSet].filter((k) => !toSet.has(k)).sort(),
+    retained: [...toSet].filter((k) => fromSet.has(k)).sort(),
+  }
+}

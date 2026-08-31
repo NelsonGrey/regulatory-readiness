@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { diffEvaluations, evaluationDiffIsEmpty } from './reevaluate.js'
+import { diffControlSets, diffEvaluations, evaluationDiffIsEmpty } from './reevaluate.js'
 
 const r = (control: string, result: string) => ({
   control,
@@ -35,5 +35,22 @@ describe('diffEvaluations', () => {
     ])
     expect(d.unchanged).toBe(1)
     expect(evaluationDiffIsEmpty(d)).toBe(false)
+  })
+})
+
+describe('diffControlSets', () => {
+  it('splits into added / removed / retained, sorted', () => {
+    expect(diffControlSets(['C', 'A', 'B'], ['B', 'D', 'A'])).toEqual({
+      added: ['D'],
+      removed: ['C'],
+      retained: ['A', 'B'],
+    })
+  })
+
+  it('is empty added/removed when the sets match', () => {
+    const d = diffControlSets(['A', 'B'], ['B', 'A'])
+    expect(d.added).toEqual([])
+    expect(d.removed).toEqual([])
+    expect(d.retained).toEqual(['A', 'B'])
   })
 })

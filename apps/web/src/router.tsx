@@ -10,6 +10,7 @@ import { SnapshotsPage } from './routes/SnapshotsPage.js'
 import { NotificationsPage } from './routes/NotificationsPage.js'
 import { DocumentsPage } from './routes/DocumentsPage.js'
 import { ExtractionReviewPage } from './routes/ExtractionReviewPage.js'
+import { PackImpactPage } from './routes/PackImpactPage.js'
 import { ContributorPortalPage } from './routes/ContributorPortalPage.js'
 
 export const routes: RouteObject[] = [
@@ -19,6 +20,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <PacksPage /> },
       { path: 'w/entities/new', element: <NewEntityPage /> },
+      { path: 'w/packs/:packKey/impact', element: <PackImpactPage /> },
       { path: 'w/entities/:id/matrix', element: <MatrixPage /> },
       { path: 'w/entities/:id/review', element: <ReviewQueuePage /> },
       { path: 'w/entities/:id/requests', element: <RequestsPage /> },

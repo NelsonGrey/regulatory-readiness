@@ -699,6 +699,31 @@ suite('Postgres unit of work + RLS (integration)', () => {
     )
   })
 
+  it('list() returns every tenant entity with its current evaluation, and nothing cross-tenant', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'l1'), makeEvaluation('t-alpha', 'l1'))
+      await u.entities.create(makeEntity('t-alpha', 'l2'), makeEvaluation('t-alpha', 'l2'))
+    })
+    await uow('t-bravo', (u) =>
+      u.entities.create(makeEntity('t-bravo', 'l3'), makeEvaluation('t-bravo', 'l3')),
+    )
+    // move l1 to a v2 evaluation
+    await uow('t-alpha', (u) =>
+      u.entities.reEvaluate('l1', {
+        ...makeEvaluation('t-alpha', 'l1'),
+        id: 'l1-eval-2',
+        version: 2,
+      }),
+    )
+
+    const alpha = await uow('t-alpha', (u) => u.entities.list())
+    expect(alpha.map((e) => `${e.entity.id}@v${e.evaluation.version}`).sort()).toEqual([
+      'l1@v2',
+      'l2@v1',
+    ])
+    expect(await uow('t-bravo', (u) => u.entities.list())).toHaveLength(1)
+  })
+
   it('re-evaluation adds a new version and moves the entity pointer, keeping the old one', async () => {
     await uow('t-alpha', (u) =>
       u.entities.create(makeEntity('t-alpha', 'ere'), makeEvaluation('t-alpha', 'ere')),

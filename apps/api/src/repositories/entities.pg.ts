@@ -139,6 +139,25 @@ export class PgEntityRepository implements EntityRepository {
     )
   }
 
+  async list(): Promise<Array<{ entity: RegulatedEntity; evaluation: EntityScopeEvaluation }>> {
+    const entityRes = await this.db.query<EntityRow>(
+      `SELECT * FROM regulated_entity WHERE tenant_id = $1 ORDER BY created_at`,
+      [this.tenantId],
+    )
+    if (entityRes.rows.length === 0) return []
+
+    const evalRes = await this.db.query<EvaluationRow>(
+      `SELECT * FROM entity_scope_evaluation WHERE tenant_id = $1 AND id = ANY($2::text[])`,
+      [this.tenantId, entityRes.rows.map((e) => e.current_evaluation_id)],
+    )
+    const evalById = new Map(evalRes.rows.map((ev) => [ev.id, toEvaluation(ev)]))
+
+    return entityRes.rows.flatMap((e) => {
+      const evaluation = evalById.get(e.current_evaluation_id)
+      return evaluation ? [{ entity: toEntity(e), evaluation }] : []
+    })
+  }
+
   async get(
     id: string,
   ): Promise<{ entity: RegulatedEntity; evaluation: EntityScopeEvaluation } | null> {

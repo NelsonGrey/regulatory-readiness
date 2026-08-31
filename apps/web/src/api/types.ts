@@ -253,6 +253,23 @@ export interface ReEvaluateResponse {
   diff: EvaluationDiff
 }
 
+export interface ImpactedEntity {
+  entityId: string
+  name: string
+  snapshotKey: string
+  evaluationVersion: number
+  addedControls: string[]
+  removedControls: string[]
+  orphanedClaims: number
+}
+
+export interface SnapshotImpactReport {
+  packKey: string
+  currentSnapshotKey: string
+  upToDate: number
+  impacted: ImpactedEntity[]
+}
+
 export interface ExtractionRun {
   id: string
   documentId: string

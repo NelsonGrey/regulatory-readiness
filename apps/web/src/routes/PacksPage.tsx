@@ -39,6 +39,7 @@ export function PacksPage(): ReactElement {
               <th>Snapshot</th>
               <th>Status</th>
               <th>Valid</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -52,6 +53,9 @@ export function PacksPage(): ReactElement {
                 <td>{p.snapshotKey ?? '—'}</td>
                 <td>{p.status ?? '—'}</td>
                 <td>{p.valid ? 'yes' : 'no'}</td>
+                <td>
+                  <Link to={`/w/packs/${p.packKey}/impact`}>Snapshot impact →</Link>
+                </td>
               </tr>
             ))}
           </tbody>

@@ -90,6 +90,18 @@ export async function registerEntityRoutes(
     return reply.code(201).send(result)
   })
 
+  app.get('/packs/:packKey/impact', async (req, reply) => {
+    const auth = authFromRequest(req)
+    if (!auth) return reply.code(401).send(NO_TENANT)
+    const { packKey } = req.params as { packKey: string }
+    const result = await opts.entities.snapshotImpact(auth, packKey)
+    if (!result.ok) {
+      const status = result.code === 'PACK_NOT_FOUND' ? 404 : 409
+      return reply.code(status).send({ error: { code: result.code, message: result.message } })
+    }
+    return result.report
+  })
+
   app.get('/entities/:id/matrix', async (req, reply) => {
     const auth = authFromRequest(req)
     if (!auth) return reply.code(401).send(NO_TENANT)

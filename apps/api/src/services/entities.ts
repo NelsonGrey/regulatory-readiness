@@ -3,6 +3,7 @@ import type { CreateEntityRequest } from '@rre/contracts'
 import { evaluateApplicability, validateEntityFacts, type FactIssue } from '@rre/control-catalog'
 import {
   canonicalJson,
+  diffControlSets,
   diffEvaluations,
   readinessForEntity,
   summariseApplicability,
@@ -32,6 +33,8 @@ export interface EntityRepository {
   get(id: string): Promise<{ entity: RegulatedEntity; evaluation: EntityScopeEvaluation } | null>
   /** Persist a new scope evaluation and point the entity at it. Prior evaluations stay. */
   reEvaluate(entityId: string, evaluation: EntityScopeEvaluation): Promise<void>
+  /** Every entity in the tenant with its current evaluation. */
+  list(): Promise<Array<{ entity: RegulatedEntity; evaluation: EntityScopeEvaluation }>>
 }
 
 export type CreateEntityFailure =
@@ -358,4 +361,76 @@ export class EntityService {
       }
     })
   }
+
+  /**
+   * Which entities on this pack are evaluated against an older control snapshot
+   * than the one currently installed, and what changed for each (TRD §7.4).
+   * Adopting the change is `reEvaluate` — this endpoint is the "who is affected"
+   * view that comes first.
+   */
+  async snapshotImpact(
+    auth: AuthContext,
+    packKey: string,
+  ): Promise<
+    | { ok: true; report: SnapshotImpactReport }
+    | { ok: false; code: 'PACK_NOT_FOUND' | 'PACK_NOT_LOADED'; message: string }
+  > {
+    const pack = this.packs.get(packKey)
+    if (!pack) return { ok: false, code: 'PACK_NOT_FOUND', message: `no pack "${packKey}"` }
+    if (!pack.loaded || !pack.valid) {
+      return { ok: false, code: 'PACK_NOT_LOADED', message: `pack "${packKey}" is not valid` }
+    }
+    const currentSnapshotKey = pack.loaded.manifest.snapshotKey
+    const currentControls = pack.loaded.controls.map((c) => c.key)
+
+    return this.uow(auth.tenantId, async (u) => {
+      const entities = (await u.entities.list()).filter((e) => e.entity.packKey === packKey)
+      let upToDate = 0
+      const impacted: ImpactedEntity[] = []
+
+      for (const { entity, evaluation } of entities) {
+        if (evaluation.snapshotKey === currentSnapshotKey) {
+          upToDate++
+          continue
+        }
+        const diff = diffControlSets(
+          evaluation.results.map((r) => r.control),
+          currentControls,
+        )
+        const removedSet = new Set(diff.removed)
+        const claims = await u.claims.listByEntity(entity.id)
+        const orphanedClaims = claims.filter(
+          (c) => c.status === 'APPROVED' && removedSet.has(c.controlKey),
+        ).length
+        impacted.push({
+          entityId: entity.id,
+          name: entity.name,
+          snapshotKey: evaluation.snapshotKey,
+          evaluationVersion: evaluation.version,
+          addedControls: diff.added,
+          removedControls: diff.removed,
+          orphanedClaims,
+        })
+      }
+
+      return { ok: true, report: { packKey, currentSnapshotKey, upToDate, impacted } }
+    })
+  }
+}
+
+export interface ImpactedEntity {
+  entityId: string
+  name: string
+  snapshotKey: string
+  evaluationVersion: number
+  addedControls: string[]
+  removedControls: string[]
+  orphanedClaims: number
+}
+
+export interface SnapshotImpactReport {
+  packKey: string
+  currentSnapshotKey: string
+  upToDate: number
+  impacted: ImpactedEntity[]
 }

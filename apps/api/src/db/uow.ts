@@ -712,6 +712,27 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
           null
         return evaluation ? { entity, evaluation } : null
       },
+      async list() {
+        const out: Array<{ entity: RegulatedEntity; evaluation: EntityScopeEvaluation }> = []
+        for (const stored of [...stores.entities.values(), ...stagedEntities]) {
+          if (stored.tenantId !== tenantId) continue
+          const currentEvalId = entityEvalPointer.get(stored.id) ?? stored.currentEvaluationId
+          const evaluation =
+            stores.evaluations.get(currentEvalId) ??
+            stagedEvaluations.find((e) => e.id === currentEvalId) ??
+            null
+          if (evaluation) {
+            out.push({
+              entity:
+                currentEvalId === stored.currentEvaluationId
+                  ? stored
+                  : { ...stored, currentEvaluationId: currentEvalId },
+              evaluation,
+            })
+          }
+        }
+        return out
+      },
     }
 
     const uow: Uow = {

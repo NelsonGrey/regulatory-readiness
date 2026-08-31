@@ -146,6 +146,68 @@ describe('EntityService.reEvaluate', () => {
     expect(res.diff).toMatchObject({ added: [], removed: [], applicabilityChanged: [] })
   })
 
+  it('lists entities on a stale control snapshot with the added/removed/orphan summary', async () => {
+    const { service, stores } = await setup()
+    const created = await service.create(auth, bankRequest)
+    if (!created.ok) throw new Error()
+    const entityId = created.entity.id
+
+    // simulate the pack having changed under this entity: its frozen evaluation
+    // is on an old snapshot, is missing a control that now exists, and carries a
+    // control that no longer does.
+    const ev = [...stores.evaluations.values()].find((e) => e.entityId === entityId)!
+    ev.snapshotKey = 'EAA-IE-EN549-OLD'
+    ev.results = [
+      ...ev.results.filter((r) => r.control !== 'EAA-EN549-9-2-1-1'),
+      { control: 'EAA-RETIRED-1', result: 'REQUIRED_BY_SNAPSHOT' },
+    ]
+    stores.claims.push({
+      id: 'clm_orphan',
+      tenantId: 't-demo',
+      entityId,
+      controlKey: 'EAA-RETIRED-1',
+      packKey: 'eaa-accessibility',
+      origin: 'INTERNAL_ASSERTION',
+      revision: 1,
+      supersedesClaimId: null,
+      status: 'APPROVED',
+      value: 'v',
+      unit: null,
+      methodContext: null,
+      asOfDate: null,
+      note: null,
+      evidenceUrl: null,
+      assertedBy: 'tester',
+      assertedAt: '2026-08-31T00:00:00.000Z',
+    })
+
+    const res = await service.snapshotImpact(auth, 'eaa-accessibility')
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    expect(res.report.upToDate).toBe(0)
+    expect(res.report.impacted).toHaveLength(1)
+    const row = res.report.impacted[0]!
+    expect(row.entityId).toBe(entityId)
+    expect(row.snapshotKey).toBe('EAA-IE-EN549-OLD')
+    expect(row.addedControls).toContain('EAA-EN549-9-2-1-1')
+    expect(row.removedControls).toEqual(['EAA-RETIRED-1'])
+    expect(row.orphanedClaims).toBe(1)
+
+    // adopting = re-evaluate → the entity is up to date and no longer listed
+    await service.reEvaluate(auth, entityId, {})
+    const after = await service.snapshotImpact(auth, 'eaa-accessibility')
+    expect(after.ok && after.report.impacted).toHaveLength(0)
+    expect(after.ok && after.report.upToDate).toBe(1)
+  })
+
+  it('reports PACK_NOT_FOUND for an unknown pack', async () => {
+    const { service } = await setup()
+    expect(await service.snapshotImpact(auth, 'nope')).toMatchObject({
+      ok: false,
+      code: 'PACK_NOT_FOUND',
+    })
+  })
+
   it('rejects invalid corrected facts and an unknown entity', async () => {
     const { service } = await setup()
     const created = await service.create(auth, bankRequest)
