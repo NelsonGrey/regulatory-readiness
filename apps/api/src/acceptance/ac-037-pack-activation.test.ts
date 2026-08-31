@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FastifyInstance } from 'fastify'
 import { createInMemoryStores, inMemoryUnitOfWork } from '../db/uow.js'
-import { buildTestApp, type InjectResponse } from './helpers.js'
+import { bankEntityRequest, buildTestApp, type InjectResponse } from './helpers.js'
 
 const ADMIN_A = 'ann@rre.test'
 const ADMIN_B = 'ben@rre.test'
@@ -91,5 +91,48 @@ describe('AC-037 — pack activation workflow', () => {
         (body(packs2).packs as Array<Record<string, any>>).find((p) => p.packKey === PACK)!.status,
       ).toBe('draft')
     })
+  })
+
+  it('with requirePackActivation, an entity can only be created against an active pack', async () => {
+    const app = buildTestApp({
+      unitOfWork: inMemoryUnitOfWork(createInMemoryStores()),
+      platformAdmins: [ADMIN_A, ADMIN_B],
+      requirePackActivation: true,
+    })
+    try {
+      const headers = { 'x-user-email': 'ops@acme.test', 'x-tenant-id': 't-req' }
+
+      const blocked = await app.inject({
+        method: 'POST',
+        url: '/api/v1/entities',
+        headers,
+        payload: bankEntityRequest(),
+      })
+      expect(blocked.statusCode).toBe(409)
+      expect(body(blocked).error.code).toBe('PACK_NOT_ACTIVE')
+
+      for (const who of [ADMIN_A, ADMIN_B]) {
+        await app.inject({
+          method: 'POST',
+          url: `/api/v1/admin/packs/${PACK}/reviews`,
+          headers: { 'x-user-email': who },
+        })
+      }
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/admin/packs/${PACK}/activate`,
+        headers: asA,
+      })
+
+      const created = await app.inject({
+        method: 'POST',
+        url: '/api/v1/entities',
+        headers,
+        payload: bankEntityRequest(),
+      })
+      expect(created.statusCode).toBe(201)
+    } finally {
+      await app.close()
+    }
   })
 })

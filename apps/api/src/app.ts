@@ -93,6 +93,8 @@ export interface BuildAppOptions {
   packGovernanceRepo?: PackGovernanceRepository
   /** Emails allowed to govern control packs (platform admins). */
   platformAdmins?: string[]
+  /** When true, `POST /entities` refuses a pack whose governed status is not `active`. */
+  requirePackActivation?: boolean
   /**
    * Dev stand-in for the membership hook: synthesise an `owner` from headers
    * when no real membership exists. Off by default — production refuses a
@@ -165,7 +167,13 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         platformAdmins,
       })
       await registerEntityRoutes(v1, {
-        entities: new EntityService(unitOfWork, registry, billingService),
+        entities: new EntityService(
+          unitOfWork,
+          registry,
+          billingService,
+          packGovernance,
+          options.requirePackActivation ?? false,
+        ),
       })
       await registerAuditRoutes(v1, { audit: new AuditService(unitOfWork) })
       await registerClaimRoutes(v1, { claims: new ClaimService(unitOfWork, registry) })

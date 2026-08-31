@@ -158,6 +158,7 @@ async function main(): Promise<void> {
     emailSender,
     packGovernanceRepo,
     platformAdmins,
+    requirePackActivation: process.env.ALLOW_DRAFT_PACKS !== '1',
     devAuth: process.env.DEV_AUTH === '1',
   })
 

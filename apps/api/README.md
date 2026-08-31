@@ -34,6 +34,7 @@ stand-in trusts the `x-user-email` header.
 | `RESEND_API_KEY` + `EMAIL_FROM` | Send invite emails via Resend instead of logging them |
 | `APP_BASE_URL` | Absolute base for links in emails and billing redirects |
 | `PLATFORM_ADMIN_EMAILS` | Comma-separated allowlist for the `/admin/packs` governance routes |
+| `ALLOW_DRAFT_PACKS=1` | Dev only — allow `POST /entities` against a pack that isn't governed-`active` |
 
 ## Routes
 

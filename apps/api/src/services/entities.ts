@@ -40,6 +40,7 @@ export interface EntityRepository {
 export type CreateEntityFailure =
   | { code: 'PACK_NOT_FOUND'; message: string }
   | { code: 'PACK_NOT_LOADED'; message: string }
+  | { code: 'PACK_NOT_ACTIVE'; message: string }
   | { code: 'KIND_MISMATCH'; message: string }
   | { code: 'INVALID_FACTS'; message: string; issues: FactIssue[] }
   | { code: 'QUOTA_EXCEEDED'; message: string }
@@ -47,6 +48,11 @@ export type CreateEntityFailure =
 /** The billing check EntityService uses — `BillingService` satisfies this. */
 export interface EntityQuota {
   assertCanAdd(tenantId: string, resource: 'entities'): Promise<{ ok: boolean; message?: string }>
+}
+
+/** The governed-status check — `PackGovernanceService` satisfies this. */
+export interface PackStatusSource {
+  effectiveStatus(packKey: string): Promise<string>
 }
 
 export type CreateEntityResult =
@@ -88,6 +94,9 @@ export class EntityService {
     private readonly uow: UnitOfWork,
     private readonly packs: PackRegistry,
     private readonly quota?: EntityQuota,
+    private readonly packStatus?: PackStatusSource,
+    /** When true, an entity can only be created against a governed-`active` pack. */
+    private readonly requirePackActivation = false,
   ) {}
 
   async create(
@@ -99,6 +108,17 @@ export class EntityService {
     if (!pack) return { ok: false, code: 'PACK_NOT_FOUND', message: `no pack "${req.packKey}"` }
     if (!pack.loaded || !pack.valid) {
       return { ok: false, code: 'PACK_NOT_LOADED', message: `pack "${req.packKey}" is not valid` }
+    }
+
+    if (this.requirePackActivation && this.packStatus) {
+      const status = await this.packStatus.effectiveStatus(req.packKey)
+      if (status !== 'active') {
+        return {
+          ok: false,
+          code: 'PACK_NOT_ACTIVE',
+          message: `control pack "${req.packKey}" has not been activated for use`,
+        }
+      }
     }
 
     if (req.facts.entityKind !== undefined && req.facts.entityKind !== req.entityKind) {
