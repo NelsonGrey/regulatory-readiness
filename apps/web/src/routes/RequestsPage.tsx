@@ -25,6 +25,7 @@ export function RequestsPage(): ReactElement {
 
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const [message, setMessage] = useState('')
+  const [recipientEmail, setRecipientEmail] = useState('')
   const [expiresInDays, setExpiresInDays] = useState('14')
   const [busy, setBusy] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -69,11 +70,13 @@ export function RequestsPage(): ReactElement {
       const res = await api.post<CreateRequestResponse>(`/entities/${id}/requests`, {
         controlKeys: chosen,
         message: message.trim() || undefined,
+        recipientEmail: recipientEmail.trim() || undefined,
         expiresInDays: Number.isFinite(days) && days > 0 ? days : undefined,
       })
       setMinted(res)
       setSelected({})
       setMessage('')
+      setRecipientEmail('')
       setVersion((v) => v + 1)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Could not create the request')
@@ -149,6 +152,16 @@ export function RequestsPage(): ReactElement {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Optional — context for whoever answers"
+          />
+        </div>
+        <div className="rre-field">
+          <label htmlFor="req-recipient">Email the link to (optional)</label>
+          <input
+            id="req-recipient"
+            type="email"
+            value={recipientEmail}
+            onChange={(e) => setRecipientEmail(e.target.value)}
+            placeholder="supplier@example.com — leave blank to copy it yourself"
           />
         </div>
         <div className="rre-field">

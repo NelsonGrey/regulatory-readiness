@@ -57,7 +57,7 @@ stand-in trusts the `x-user-email` header.
 | `POST /api/v1/claims/:claimId/decisions` | Approve / reject (reason required) / request clarification; approval supersedes the prior approved claim (AC-010) |
 | `GET /api/v1/entities/:id/review-queue` | Pending claims for an entity |
 | `GET /api/v1/audit-events` | Tenant audit trail, newest first (AUD-001, AC-018) |
-| `POST /api/v1/entities/:id/requests` | REQ-001 — mint a scoped evidence request; returns the plaintext token **once** + `contributorPath` |
+| `POST /api/v1/entities/:id/requests` | REQ-001 — mint a scoped evidence request; returns the plaintext token **once** + `contributorPath`; an optional `recipientEmail` also emails the portal link |
 | `GET /api/v1/entities/:id/requests`, `GET /api/v1/requests/:requestId` | Request list / detail (items, grant prefixes + uses, submission history — never the token) |
 | `POST /api/v1/requests/:requestId/send`, `POST /api/v1/requests/:requestId/revoke` | Send / revoke a request's access token |
 | `POST /api/v1/requests/:requestId/resend` | Revoke live grants, mint a fresh link (returned once), reactivate a lapsed request (`DRAFT`/`EXPIRED`/`CANCELLED` → `SENT`) |

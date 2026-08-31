@@ -151,7 +151,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       })
       await registerAuditRoutes(v1, { audit: new AuditService(unitOfWork) })
       await registerClaimRoutes(v1, { claims: new ClaimService(unitOfWork, registry) })
-      await registerRequestRoutes(v1, { requests: new RequestService(unitOfWork, registry) })
+      await registerRequestRoutes(v1, {
+        requests: new RequestService(unitOfWork, registry, emailSender, appBaseUrl),
+      })
       await registerSnapshotRoutes(v1, { snapshots: new SnapshotService(unitOfWork, registry) })
       await registerNotificationRoutes(v1, { notifications: new NotificationService(unitOfWork) })
       await registerDocumentRoutes(v1, {

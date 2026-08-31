@@ -4,6 +4,8 @@ import type { AuthContext } from '../auth.js'
 import type { PackRegistry } from '../pack-registry.js'
 import type { UnitOfWork } from '../db/uow.js'
 import { issueToken, hashToken } from '../tokens.js'
+import type { EmailSender } from '../email/sender.js'
+import { contributorRequestEmail } from '../email/templates.js'
 
 // --- Records ------------------------------------------------------------------
 
@@ -110,6 +112,8 @@ export interface CreateRequestInput {
   message?: string
   dueAt?: string
   expiresInDays?: number
+  /** When set, the contributor portal link is emailed here (best-effort). */
+  recipientEmail?: string
 }
 
 export type CreateRequestResult =
@@ -124,11 +128,42 @@ export type CreateRequestResult =
 
 const DAY_MS = 86_400_000
 
+type ResendResult =
+  | { ok: true; token: string; grant: AccessGrantRecord; status: RequestStatus }
+  | { ok: false; code: 'NOT_FOUND' | 'CLOSED'; message: string }
+
 export class RequestService {
   constructor(
     private readonly uow: UnitOfWork,
     private readonly packs: PackRegistry,
+    private readonly email?: EmailSender,
+    private readonly appBaseUrl = 'http://localhost:5173',
   ) {}
+
+  private async emailContributorLink(
+    recipient: string,
+    token: string,
+    entityName: string,
+    controlCount: number,
+    message: string | null,
+    dueAt: string | null,
+  ): Promise<void> {
+    if (!this.email) return
+    try {
+      await this.email.send(
+        contributorRequestEmail({
+          to: recipient,
+          entityName,
+          controlCount,
+          openUrl: `${this.appBaseUrl}/contribute/${token}`,
+          message: message ?? undefined,
+          dueAt: dueAt ?? undefined,
+        }),
+      )
+    } catch {
+      // best-effort — the link is still returned to the operator
+    }
+  }
 
   async createRequest(
     auth: AuthContext,
@@ -140,11 +175,13 @@ export class RequestService {
       return { ok: false, code: 'NO_CONTROLS', message: 'at least one control is required' }
     }
 
-    return this.uow(auth.tenantId, async (u) => {
+    let entityName = ''
+    const result = await this.uow(auth.tenantId, async (u): Promise<CreateRequestResult> => {
       const found = await u.entities.get(entityId)
       if (!found) {
         return { ok: false, code: 'ENTITY_NOT_FOUND', message: `entity ${entityId} not found` }
       }
+      entityName = found.entity.name
       const pack = this.packs.get(found.entity.packKey)
       const known = new Set(pack?.loaded?.controls.map((c) => c.key) ?? [])
       const applByControl = new Map(found.evaluation.results.map((r) => [r.control, r.result]))
@@ -226,6 +263,18 @@ export class RequestService {
 
       return { ok: true, request, items, token: issued.token, grant }
     })
+
+    if (result.ok && input.recipientEmail) {
+      await this.emailContributorLink(
+        input.recipientEmail,
+        result.token,
+        entityName,
+        result.items.length,
+        result.request.message,
+        result.request.dueAt,
+      )
+    }
+    return result
   }
 
   async listRequests(auth: AuthContext, entityId: string): Promise<EvidenceRequestRecord[]> {
@@ -335,17 +384,28 @@ export class RequestService {
   async resend(
     auth: AuthContext,
     requestId: string,
-    input: { expiresInDays?: number } = {},
+    input: { expiresInDays?: number; recipientEmail?: string } = {},
     now: Date = new Date(),
-  ): Promise<
-    | { ok: true; token: string; grant: AccessGrantRecord; status: RequestStatus }
-    | { ok: false; code: 'NOT_FOUND' | 'CLOSED'; message: string }
-  > {
-    return this.uow(auth.tenantId, async (u) => {
+  ): Promise<ResendResult> {
+    let mail: {
+      entityName: string
+      controlCount: number
+      message: string | null
+      dueAt: string | null
+    } | null = null
+    const result = await this.uow(auth.tenantId, async (u): Promise<ResendResult> => {
       const request = await u.requests.getRequest(requestId)
       if (!request) return { ok: false, code: 'NOT_FOUND', message: 'request not found' }
       if (request.status === 'CLOSED') {
         return { ok: false, code: 'CLOSED', message: 'a closed request cannot be reissued' }
+      }
+      const entity = await u.entities.get(request.entityId)
+      const items = await u.requests.listItems(requestId)
+      mail = {
+        entityName: entity?.entity.name ?? request.entityId,
+        controlCount: items.length,
+        message: request.message,
+        dueAt: request.dueAt,
       }
 
       const at = now.toISOString()
@@ -387,6 +447,24 @@ export class RequestService {
 
       return { ok: true, token: issued.token, grant, status }
     })
+
+    if (result.ok && input.recipientEmail && mail) {
+      const m: {
+        entityName: string
+        controlCount: number
+        message: string | null
+        dueAt: string | null
+      } = mail
+      await this.emailContributorLink(
+        input.recipientEmail,
+        result.token,
+        m.entityName,
+        m.controlCount,
+        m.message,
+        m.dueAt,
+      )
+    }
+    return result
   }
 
   async acceptResponseItem(

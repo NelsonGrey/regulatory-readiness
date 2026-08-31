@@ -95,12 +95,16 @@ export const CreateRequestRequest = z.object({
   message: z.string().optional(),
   dueAt: z.string().optional(),
   expiresInDays: z.number().int().positive().max(365).optional(),
+  /** When set, the contributor portal link is emailed to this address. */
+  recipientEmail: z.string().email().optional(),
 })
 export type CreateRequestRequest = z.infer<typeof CreateRequestRequest>
 
 /** POST /entities/:id/requests/:requestId/resend — revoke live grants, mint a new link. */
 export const ResendRequestRequest = z.object({
   expiresInDays: z.number().int().positive().max(365).optional(),
+  /** When set, the fresh portal link is emailed to this address. */
+  recipientEmail: z.string().email().optional(),
 })
 export type ResendRequestRequest = z.infer<typeof ResendRequestRequest>
 

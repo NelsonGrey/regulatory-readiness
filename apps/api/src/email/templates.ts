@@ -40,3 +40,42 @@ export function inviteEmail(input: InviteEmailInput): EmailMessage {
     html,
   }
 }
+
+export interface ContributorRequestEmailInput {
+  to: string
+  entityName: string
+  controlCount: number
+  openUrl: string
+  message?: string
+  dueAt?: string
+}
+
+/** "Please provide information" — carries the no-account contributor portal link. */
+export function contributorRequestEmail(input: ContributorRequestEmailInput): EmailMessage {
+  const due = input.dueAt ? `\n\nRequested by: ${new Date(input.dueAt).toUTCString()}.` : ''
+  const note = input.message ? `\n\nA note from the requester:\n${input.message}` : ''
+  const text = [
+    `You've been asked to provide information about "${input.entityName}" —`,
+    `${input.controlCount} item${input.controlCount === 1 ? '' : 's'} to fill in. No account needed.`,
+    ``,
+    `Open the form: ${input.openUrl}${note}${due}`,
+    ``,
+    `This link is time-limited and personal to you. If it wasn't expected, ignore this email.`,
+  ].join('\n')
+
+  const html = [
+    `<p>You've been asked to provide information about <strong>${esc(input.entityName)}</strong> — `,
+    `${input.controlCount} item${input.controlCount === 1 ? '' : 's'} to fill in. No account needed.</p>`,
+    `<p><a href="${esc(input.openUrl)}">Open the form</a></p>`,
+    input.message
+      ? `<p style="border-left:3px solid #ccc;padding-left:10px;color:#444">${esc(input.message)}</p>`
+      : '',
+    input.dueAt
+      ? `<p style="color:#666;font-size:13px">Requested by ${esc(new Date(input.dueAt).toUTCString())}.</p>`
+      : '',
+    `<p style="color:#666;font-size:13px">This link is time-limited and personal to you. `,
+    `If it wasn't expected, ignore this email.</p>`,
+  ].join('')
+
+  return { to: input.to, subject: `Information requested: ${input.entityName}`, text, html }
+}

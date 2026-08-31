@@ -20,6 +20,7 @@ export function RequestDetailPage(): ReactElement {
   const [error, setError] = useState<string | null>(null)
   const [reissued, setReissued] = useState<{ token: string; expiresAt: string } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [resendEmail, setResendEmail] = useState('')
 
   const load = useCallback(() => {
     let live = true
@@ -61,9 +62,10 @@ export function RequestDetailPage(): ReactElement {
     try {
       const res = await api.post<{ token: string; expiresAt: string }>(
         `/requests/${requestId}/resend`,
-        {},
+        resendEmail.trim() ? { recipientEmail: resendEmail.trim() } : {},
       )
       setReissued({ token: res.token, expiresAt: res.expiresAt })
+      setResendEmail('')
       setCopied(false)
       setVersion((v) => v + 1)
     } catch (err) {
@@ -156,14 +158,23 @@ export function RequestDetailPage(): ReactElement {
           </button>
         ) : null}
         {request.status !== 'CLOSED' ? (
-          <button
-            type="button"
-            className="rre-secondary"
-            disabled={busy === 'resend'}
-            onClick={reissue}
-          >
-            {busy === 'resend' ? 'Reissuing…' : activeGrant ? 'Reissue link' : 'Send a new link'}
-          </button>
+          <>
+            <input
+              type="email"
+              aria-label="email the new link to"
+              placeholder="email the link (optional)"
+              value={resendEmail}
+              onChange={(e) => setResendEmail(e.target.value)}
+            />
+            <button
+              type="button"
+              className="rre-secondary"
+              disabled={busy === 'resend'}
+              onClick={reissue}
+            >
+              {busy === 'resend' ? 'Reissuing…' : activeGrant ? 'Reissue link' : 'Send a new link'}
+            </button>
+          </>
         ) : null}
       </div>
 

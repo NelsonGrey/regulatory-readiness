@@ -98,6 +98,43 @@ describe('RequestsPage', () => {
     expect(screen.getByText(/\/contribute\/tok_secret_value$/)).toBeInTheDocument()
   })
 
+  it('includes the recipient email in the create request when filled', async () => {
+    const user = userEvent.setup()
+    const { calls } = mockApi([
+      { path: '/api/v1/entities/ent_1/matrix', method: 'GET', body: matrix },
+      { path: '/api/v1/entities/ent_1/requests', method: 'GET', body: { requests: [] } },
+      {
+        path: '/api/v1/entities/ent_1/requests',
+        method: 'POST',
+        status: 201,
+        body: {
+          request: {
+            id: 'req_1',
+            entityId: 'ent_1',
+            packKey: 'eaa-accessibility',
+            status: 'DRAFT',
+          },
+          items: [{ id: 'rqi_1', requestId: 'req_1', controlKey: 'EAA-1' }],
+          token: 'tok_v',
+          tokenPrefix: 'tok_v',
+          expiresAt: '2026-09-20T00:00:00.000Z',
+          contributorPath: '/contributor/v1/requests/tok_v',
+        },
+      },
+    ])
+
+    renderRoute('/w/entities/ent_1/requests')
+    await screen.findByText('EAA-1')
+    await user.click(screen.getByRole('checkbox'))
+    await user.type(screen.getByLabelText(/email the link to/i), 'vendor@supplier.test')
+    await user.click(screen.getByRole('button', { name: /create request \(1\)/i }))
+
+    await waitFor(() => {
+      const post = calls.find((c) => c.method === 'POST')
+      expect(post?.body).toMatchObject({ recipientEmail: 'vendor@supplier.test' })
+    })
+  })
+
   it('lists existing requests with a link to each', async () => {
     mockApi([
       { path: '/api/v1/entities/ent_1/matrix', method: 'GET', body: matrix },
