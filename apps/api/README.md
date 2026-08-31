@@ -33,7 +33,7 @@ stand-in trusts the `x-user-email` header.
 | `STRIPE_WEBHOOK_SECRET` | Enables `POST /webhooks/stripe` (503s without it) |
 | `RESEND_API_KEY` + `EMAIL_FROM` | Send invite emails via Resend instead of logging them |
 | `APP_BASE_URL` | Absolute base for links in emails and billing redirects |
-| `PLATFORM_ADMIN_EMAILS` | Comma-separated allowlist for the `/admin/packs` governance routes |
+| `PLATFORM_ADMIN_EMAILS` | Comma-separated allowlist for the `/admin/packs` + `/admin/pack-sources` governance routes |
 | `ALLOW_DRAFT_PACKS=1` | Dev only — allow `POST /entities` against a pack that isn't governed-`active` |
 
 ## Routes
@@ -53,6 +53,9 @@ stand-in trusts the `x-user-email` header.
 | `GET /api/v1/packs`, `GET /api/v1/packs/:packKey` | Installed control packs + validation status (registry-backed, ADR 0005); `status` is the governed status, `onDiskStatus` the manifest's |
 | `GET /api/v1/admin/packs` | Platform admin — per-pack governance: checksum, issues, reviews, activation, effective status, drift, blockers |
 | `POST /api/v1/admin/packs/:packKey/reviews` / `/activate` / `/withdraw` | Platform admin — record a review against the current checksum / activate (needs valid + 2 reviewers) / withdraw |
+| `GET /api/v1/admin/pack-sources` | Platform admin — source-of-record watchlist: per-URL last check (hash, status, etag, error) + open detected changes |
+| `POST /api/v1/admin/pack-sources/sweep` | Platform admin — fetch + hash every pack manifest `sourceUrls` entry now; raises an open change on a hash shift from a known prior |
+| `POST /api/v1/admin/pack-sources/changes/:id/acknowledge` | Platform admin — close one open source change (409 `NOT_OPEN` if already acknowledged) |
 | `POST /api/v1/entities` | ENT-001 — create a regulated entity; records scope facts, pack + snapshot, per-control applicability, actor, time, and a reproducibility hash (AC-003) |
 | `GET /api/v1/entities` | Every entity in the workspace with its current snapshot + readiness roll-up (`entityStatus`, `readinessCounts`), newest first — the dashboard feed |
 | `GET /api/v1/entities/:id/matrix` | MAT-001 — per-control applicability + readiness, approved value, entity status, honest counts (AC-004) |

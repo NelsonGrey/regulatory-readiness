@@ -480,6 +480,31 @@ export interface PackOverviewList {
   packs: PackOverview[]
 }
 
+export interface PackSourceCheck {
+  url: string
+  packKeys: string[]
+  lastHash: string | null
+  lastStatus: 'pending' | 'ok' | 'unchanged' | 'changed' | 'error'
+  lastCheckedAt: string | null
+  lastError: string | null
+}
+
+export interface PackSourceChange {
+  id: string
+  url: string
+  packKeys: string[]
+  fromHash: string | null
+  toHash: string
+  detectedAt: string
+  acknowledgedBy: string | null
+  acknowledgedAt: string | null
+}
+
+export interface PackSourceOverview {
+  checks: PackSourceCheck[]
+  openChanges: PackSourceChange[]
+}
+
 export interface BillingSummary {
   plan: 'trial' | 'starter' | 'growth'
   status: 'trialing' | 'active' | 'past_due' | 'canceled'

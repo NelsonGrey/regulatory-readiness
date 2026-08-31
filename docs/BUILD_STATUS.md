@@ -1,4 +1,4 @@
-# Build status — retrospective after slice 27
+# Build status — retrospective after slice 28
 
 A checkpoint for the founder. What exists, what is deliberately a stand-in, and
 what a real launch still needs. The per-slice log lives in the root `README.md`;
@@ -57,7 +57,7 @@ served through the same endpoints with **zero engine code change**.
   transaction, a non-superuser app role with append-only `REVOKE`s.
 - A transactional outbox → relay → SQS; a worker (events consumer, expiry sweep).
 - One unit of work: business write + audit event + outbox commit atomically.
-- 320 tests (unit + web + HTTP UAT + skipped-unless-`TEST_DATABASE_URL` pg
+- 330 tests (unit + web + HTTP UAT + skipped-unless-`TEST_DATABASE_URL` pg
   integration). `typecheck` / `lint` / `lint:copy` / `test` / `build` green on
   every commit to `develop`; CI runs the pg suite against `postgres:16`.
 
@@ -73,6 +73,7 @@ served through the same endpoints with **zero engine code change**.
 | Object storage | in-memory local store | `createS3ObjectStore` exists; only local is exercised in CI |
 | Platform admin | `PLATFORM_ADMIN_EMAILS` allowlist | an IdP group / org role |
 | Pack source | files in `packs/` loaded at boot | governance state is already data; pack *bundles* are still a deploy |
+| Regulatory-change watch | `PackSourceService.sweep()` — admin-triggered, hashes each pack's `sourceUrls` and raises an open change on a shift | add a cron / worker tick that calls `sweep()`; later, the AI agent that reads the diff and drafts the pack update |
 
 ## What a real launch still needs
 

@@ -3,9 +3,11 @@ import { z } from '@rre/contracts'
 import { isPlatformAdmin } from '../platform.js'
 import type { PrincipalVerifier } from '../auth/verifier.js'
 import type { PackGovernanceService } from '../services/pack-governance.js'
+import type { PackSourceService } from '../services/pack-source.js'
 
 interface PackAdminRoutesOptions extends FastifyPluginOptions {
   governance: PackGovernanceService
+  sources: PackSourceService
   verifier: PrincipalVerifier
   platformAdmins: string[]
 }
@@ -67,5 +69,30 @@ export async function registerPackAdminRoutes(
     const res = await opts.governance.withdraw(packKey, email)
     if (!res.ok) return reply.code(409).send({ error: { code: res.code, message: res.message } })
     return { ok: true, status: 'withdrawn' }
+  })
+
+  // --- source-of-record monitoring ---
+
+  app.get('/admin/pack-sources', async (req, reply) => {
+    if (!(await admin(req, reply))) return reply
+    return opts.sources.overview()
+  })
+
+  app.post('/admin/pack-sources/sweep', async (req, reply) => {
+    if (!(await admin(req, reply))) return reply
+    return { ok: true, ...(await opts.sources.sweep()) }
+  })
+
+  app.post('/admin/pack-sources/changes/:id/acknowledge', async (req, reply) => {
+    const email = await admin(req, reply)
+    if (!email) return reply
+    const { id } = req.params as { id: string }
+    const ok = await opts.sources.acknowledge(id, email)
+    if (!ok) {
+      return reply
+        .code(409)
+        .send({ error: { code: 'NOT_OPEN', message: 'no open change with that id' } })
+    }
+    return { ok: true }
   })
 }

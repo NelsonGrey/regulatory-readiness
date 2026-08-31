@@ -12,6 +12,12 @@ const workspaces = {
   },
 }
 
+const noSources = {
+  path: '/api/v1/admin/pack-sources',
+  method: 'GET',
+  body: { checks: [], openChanges: [] },
+}
+
 const overview = (over: Partial<Record<string, unknown>> = {}) => ({
   packKey: 'eaa-accessibility',
   title: 'EU Accessibility Act',
@@ -36,6 +42,7 @@ describe('PackGovernancePage', () => {
       unread,
       workspaces,
       { path: '/api/v1/admin/packs', method: 'GET', body: { packs: [overview()] } },
+      noSources,
       { path: '/api/v1/admin/packs/eaa-accessibility/reviews', method: 'POST', body: { ok: true } },
     ])
 
@@ -81,6 +88,7 @@ describe('PackGovernancePage', () => {
           ],
         },
       },
+      noSources,
       {
         path: '/api/v1/admin/packs/eaa-accessibility/activate',
         method: 'POST',
@@ -103,6 +111,7 @@ describe('PackGovernancePage', () => {
     mockApi([
       unread,
       workspaces,
+      noSources,
       {
         path: '/api/v1/admin/packs',
         method: 'GET',
@@ -112,5 +121,76 @@ describe('PackGovernancePage', () => {
     ])
     renderRoute('/w/admin/packs')
     expect(await screen.findByText(/not a platform administrator/i)).toBeInTheDocument()
+  })
+
+  it('runs a source sweep and acknowledges an open change', async () => {
+    const user = userEvent.setup()
+    let acked = false
+    const { calls } = mockApi([
+      unread,
+      workspaces,
+      { path: '/api/v1/admin/packs', method: 'GET', body: { packs: [overview()] } },
+      {
+        path: '/api/v1/admin/pack-sources',
+        method: 'GET',
+        get body() {
+          return {
+            checks: [
+              {
+                url: 'https://eur-lex.europa.eu/x',
+                packKeys: ['eaa-accessibility'],
+                lastHash: 'sha256:1',
+                lastStatus: 'changed',
+                lastCheckedAt: '2026-09-10T00:00:00.000Z',
+                lastError: null,
+              },
+            ],
+            openChanges: acked
+              ? []
+              : [
+                  {
+                    id: 'psc_1',
+                    url: 'https://eur-lex.europa.eu/x',
+                    packKeys: ['eaa-accessibility'],
+                    fromHash: 'sha256:0',
+                    toHash: 'sha256:1',
+                    detectedAt: '2026-09-10T00:00:00.000Z',
+                    acknowledgedBy: null,
+                    acknowledgedAt: null,
+                  },
+                ],
+          }
+        },
+      },
+      { path: '/api/v1/admin/pack-sources/sweep', method: 'POST', body: { ok: true, changed: 1 } },
+      {
+        path: '/api/v1/admin/pack-sources/changes/psc_1/acknowledge',
+        method: 'POST',
+        get body() {
+          acked = true
+          return { ok: true }
+        },
+      },
+    ])
+
+    renderRoute('/w/admin/packs')
+
+    const list = await screen.findByTestId('open-source-changes')
+    expect(list).toHaveTextContent('eur-lex.europa.eu/x')
+
+    await user.click(within(list).getByRole('button', { name: /acknowledge/i }))
+    await waitFor(() => {
+      expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/psc_1/acknowledge'))).toBe(
+        true,
+      )
+    })
+    expect(await screen.findByTestId('no-source-changes')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /run source check now/i }))
+    await waitFor(() => {
+      expect(calls.some((c) => c.method === 'POST' && c.url.endsWith('/pack-sources/sweep'))).toBe(
+        true,
+      )
+    })
   })
 })

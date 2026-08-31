@@ -30,6 +30,11 @@ import {
   PackGovernanceService,
   type PackGovernanceRepository,
 } from './services/pack-governance.js'
+import {
+  InMemoryPackSourceRepository,
+  PackSourceService,
+  type PackSourceRepository,
+} from './services/pack-source.js'
 import { registerPackAdminRoutes } from './routes/pack-admin.js'
 import { parseStripeEvent, verifyStripeSignature } from './billing/stripe-webhook.js'
 import type { Plan } from './billing/plans.js'
@@ -95,6 +100,10 @@ export interface BuildAppOptions {
   platformAdmins?: string[]
   /** When true, `POST /entities` refuses a pack whose governed status is not `active`. */
   requirePackActivation?: boolean
+  /** Pack source-of-record monitor store. Defaults to in-memory. */
+  packSourceRepo?: PackSourceRepository
+  /** `fetch` used by the source sweep (tests inject a stub). */
+  packSourceFetch?: typeof fetch
   /**
    * Dev stand-in for the membership hook: synthesise an `owner` from headers
    * when no real membership exists. Off by default — production refuses a
@@ -136,6 +145,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     appBaseUrl,
   )
   const packGovernanceRepo = options.packGovernanceRepo ?? new InMemoryPackGovernanceRepository()
+  const packSourceRepo = options.packSourceRepo ?? new InMemoryPackSourceRepository()
   const platformAdmins = options.platformAdmins ?? []
 
   const app = Fastify({ logger: false })
@@ -160,6 +170,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       })
       const registry = options.packRegistry ?? (await getPackRegistry(packsDir))
       const packGovernance = new PackGovernanceService(packGovernanceRepo, registry)
+      const packSources = new PackSourceService(packSourceRepo, registry, options.packSourceFetch)
       await registerPackRoutes(v1, {
         registry,
         governance: packGovernance,
@@ -167,6 +178,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       })
       await registerPackAdminRoutes(v1, {
         governance: packGovernance,
+        sources: packSources,
         verifier,
         platformAdmins,
       })

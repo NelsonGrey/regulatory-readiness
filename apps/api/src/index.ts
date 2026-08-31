@@ -11,10 +11,12 @@ import { pgResolveGrant } from './repositories/requests.pg.js'
 import { PgAccountsRepository } from './repositories/accounts.pg.js'
 import { PgBillingRepository } from './repositories/billing.pg.js'
 import { PgPackGovernanceRepository } from './repositories/pack-governance.pg.js'
+import { PgPackSourceRepository } from './repositories/pack-source.pg.js'
 import {
   InMemoryPackGovernanceRepository,
   type PackGovernanceRepository,
 } from './services/pack-governance.js'
+import { InMemoryPackSourceRepository, type PackSourceRepository } from './services/pack-source.js'
 import { InMemoryAccountsRepository, type AccountsRepository } from './services/accounts.js'
 import { InMemoryBillingRepository, type BillingRepository } from './services/billing.js'
 import {
@@ -62,6 +64,7 @@ async function main(): Promise<void> {
   let accounts: AccountsRepository
   let billingRepo: BillingRepository
   let packGovernanceRepo: PackGovernanceRepository
+  let packSourceRepo: PackSourceRepository
 
   const databaseUrl = process.env.DATABASE_URL
   if (databaseUrl) {
@@ -75,6 +78,7 @@ async function main(): Promise<void> {
     accounts = new PgAccountsRepository(appPool)
     billingRepo = new PgBillingRepository(appPool)
     packGovernanceRepo = new PgPackGovernanceRepository(appPool)
+    packSourceRepo = new PgPackSourceRepository(appPool)
   } else {
     log.warn('DATABASE_URL not set — using in-memory storage')
     const stores = createInMemoryStores()
@@ -83,6 +87,7 @@ async function main(): Promise<void> {
     accounts = new InMemoryAccountsRepository()
     billingRepo = new InMemoryBillingRepository()
     packGovernanceRepo = new InMemoryPackGovernanceRepository()
+    packSourceRepo = new InMemoryPackSourceRepository()
   }
 
   const platformAdmins = (process.env.PLATFORM_ADMIN_EMAILS ?? '')
@@ -157,6 +162,7 @@ async function main(): Promise<void> {
     appBaseUrl: process.env.APP_BASE_URL,
     emailSender,
     packGovernanceRepo,
+    packSourceRepo,
     platformAdmins,
     requirePackActivation: process.env.ALLOW_DRAFT_PACKS !== '1',
     devAuth: process.env.DEV_AUTH === '1',

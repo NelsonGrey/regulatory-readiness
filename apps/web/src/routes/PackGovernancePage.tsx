@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactElement } from 'react'
 import { api, ApiError } from '../api/client.js'
-import type { PackOverview, PackOverviewList } from '../api/types.js'
+import type { PackOverview, PackOverviewList, PackSourceOverview } from '../api/types.js'
 
 const STATUS_TONE: Record<string, string> = {
   active: 'ok',
@@ -11,6 +11,7 @@ const STATUS_TONE: Record<string, string> = {
 
 export function PackGovernancePage(): ReactElement {
   const [packs, setPacks] = useState<PackOverview[] | null>(null)
+  const [sources, setSources] = useState<PackSourceOverview | null>(null)
   const [status, setStatus] = useState<'loading' | 'ok' | 'forbidden' | 'error'>('loading')
   const [version, setVersion] = useState(0)
   const [busy, setBusy] = useState('')
@@ -19,11 +20,14 @@ export function PackGovernancePage(): ReactElement {
   const load = useCallback(() => {
     let live = true
     setStatus('loading')
-    api
-      .get<PackOverviewList>('/admin/packs')
-      .then((r) => {
+    Promise.all([
+      api.get<PackOverviewList>('/admin/packs'),
+      api.get<PackSourceOverview>('/admin/pack-sources'),
+    ])
+      .then(([p, s]) => {
         if (!live) return
-        setPacks(r.packs)
+        setPacks(p.packs)
+        setSources(s)
         setStatus('ok')
       })
       .catch((e: unknown) => {
@@ -141,6 +145,78 @@ export function PackGovernancePage(): ReactElement {
           ))}
         </tbody>
       </table>
+
+      <h2>Sources of record</h2>
+      <p className="rre-note">
+        Each pack's manifest URLs are hashed on a sweep; a change raises an open item to triage.
+      </p>
+      <div className="rre-actions">
+        <button
+          type="button"
+          disabled={busy === 'sweep'}
+          onClick={() => act('sweep', '/admin/pack-sources/sweep')}
+        >
+          {busy === 'sweep' ? 'Checking…' : 'Run source check now'}
+        </button>
+      </div>
+
+      {sources && sources.openChanges.length > 0 ? (
+        <ul className="rre-queue" data-testid="open-source-changes">
+          {sources.openChanges.map((c) => (
+            <li key={c.id} className="rre-queue-item">
+              <div className="rre-queue-head">
+                {new Date(c.detectedAt).toLocaleString()} · {c.packKeys.join(', ')}
+              </div>
+              <code>{c.url}</code>
+              <div className="rre-actions">
+                <button
+                  type="button"
+                  className="rre-secondary"
+                  disabled={busy === `ack-${c.id}`}
+                  onClick={() =>
+                    act(`ack-${c.id}`, `/admin/pack-sources/changes/${c.id}/acknowledge`)
+                  }
+                >
+                  Acknowledge
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="rre-note" data-testid="no-source-changes">
+          No unacknowledged source changes.
+        </p>
+      )}
+
+      {sources && sources.checks.length > 0 ? (
+        <details>
+          <summary>Last check per source ({sources.checks.length})</summary>
+          <table className="rre-table">
+            <thead>
+              <tr>
+                <th>URL</th>
+                <th>Status</th>
+                <th>Checked</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sources.checks.map((c) => (
+                <tr key={c.url}>
+                  <td>
+                    <code>{c.url}</code>
+                  </td>
+                  <td>
+                    {c.lastStatus}
+                    {c.lastError ? ` — ${c.lastError}` : ''}
+                  </td>
+                  <td>{c.lastCheckedAt ? new Date(c.lastCheckedAt).toLocaleString() : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      ) : null}
     </section>
   )
 }
