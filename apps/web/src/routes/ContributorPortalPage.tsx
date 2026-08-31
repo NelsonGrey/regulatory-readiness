@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactElement } f
 import { useParams } from 'react-router-dom'
 import { ApiError } from '../api/client.js'
 import { contributorApi } from '../api/contributor-client.js'
-import type { AvailabilityState, ContributorReceipt, ContributorView } from '../api/types.js'
+import type {
+  AvailabilityState,
+  ContributorDraft,
+  ContributorReceipt,
+  ContributorView,
+} from '../api/types.js'
 
 const STATES: { value: AvailabilityState; label: string }[] = [
   { value: 'VALUE_SUPPLIED', label: 'I can provide a value' },
@@ -28,6 +33,31 @@ const EMPTY: Answer = {
   comment: '',
 }
 
+/** Rebuild the answer map from a saved draft, falling back to EMPTY per item. */
+function answersFromDraft(
+  itemIds: string[],
+  draft: ContributorDraft | null,
+): Record<string, Answer> {
+  const byId = new Map((draft?.items ?? []).map((i) => [i.requestItemId, i]))
+  return Object.fromEntries(
+    itemIds.map((id) => {
+      const d = byId.get(id)
+      return [
+        id,
+        d
+          ? {
+              availabilityState: d.availabilityState ?? 'VALUE_SUPPLIED',
+              value: d.value ?? '',
+              unit: d.unit ?? '',
+              methodNote: d.methodNote ?? '',
+              comment: d.comment ?? '',
+            }
+          : { ...EMPTY },
+      ]
+    }),
+  )
+}
+
 export function ContributorPortalPage(): ReactElement {
   const { token = '' } = useParams()
   const [view, setView] = useState<ContributorView | null>(null)
@@ -35,6 +65,8 @@ export function ContributorPortalPage(): ReactElement {
   const [answers, setAnswers] = useState<Record<string, Answer>>({})
   const [submitter, setSubmitter] = useState('')
   const [busy, setBusy] = useState(false)
+  const [savingDraft, setSavingDraft] = useState(false)
+  const [savedAt, setSavedAt] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [receipt, setReceipt] = useState<ContributorReceipt | null>(null)
 
@@ -46,7 +78,13 @@ export function ContributorPortalPage(): ReactElement {
       .then((v) => {
         if (!live) return
         setView(v)
-        setAnswers(Object.fromEntries(v.items.map((i) => [i.requestItemId, { ...EMPTY }])))
+        setAnswers(
+          answersFromDraft(
+            v.items.map((i) => i.requestItemId),
+            v.draft,
+          ),
+        )
+        if (v.draft?.submitterIdentity) setSubmitter(v.draft.submitterIdentity)
         setStatus('ok')
       })
       .catch((e: unknown) => {
@@ -89,6 +127,33 @@ export function ContributorPortalPage(): ReactElement {
       setFormError(err instanceof Error ? err.message : 'Could not send your answers')
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function saveDraft(): Promise<void> {
+    if (!view) return
+    setSavingDraft(true)
+    setFormError(null)
+    try {
+      const res = await contributorApi.put<{ savedAt: string }>(`/requests/${token}/draft`, {
+        submitterIdentity: submitter.trim() || undefined,
+        items: view.items.map((i) => {
+          const a = answers[i.requestItemId] ?? EMPTY
+          return {
+            requestItemId: i.requestItemId,
+            availabilityState: a.availabilityState,
+            value: a.value.trim() || undefined,
+            unit: a.unit.trim() || undefined,
+            methodNote: a.methodNote.trim() || undefined,
+            comment: a.comment.trim() || undefined,
+          }
+        }),
+      })
+      setSavedAt(res.savedAt)
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Could not save your progress')
+    } finally {
+      setSavingDraft(false)
     }
   }
 
@@ -219,10 +284,24 @@ export function ContributorPortalPage(): ReactElement {
         ) : null}
 
         <div className="rre-actions">
-          <button type="submit" disabled={busy}>
+          <button type="submit" disabled={busy || savingDraft}>
             {busy ? 'Sending…' : 'Send answers'}
           </button>
+          <button
+            type="button"
+            className="rre-secondary"
+            onClick={saveDraft}
+            disabled={busy || savingDraft}
+          >
+            {savingDraft ? 'Saving…' : 'Save progress'}
+          </button>
         </div>
+        {savedAt ? (
+          <p className="rre-note" role="status">
+            Progress saved {new Date(savedAt).toLocaleTimeString()}. You can close this page and
+            come back to the same link.
+          </p>
+        ) : null}
       </form>
     </main>
   )

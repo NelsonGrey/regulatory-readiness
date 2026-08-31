@@ -25,7 +25,8 @@ pnpm --filter @rre/api dev     # tsx watch, http://localhost:3000
 | `GET /api/v1/entities/:id/requests`, `GET /api/v1/requests/:requestId` | Request list / detail (items, grant prefixes + uses, submission history — never the token) |
 | `POST /api/v1/requests/:requestId/send`, `POST /api/v1/requests/:requestId/revoke` | Send / revoke a request's access token |
 | `POST /api/v1/submissions/:submissionId/items/:itemId/accept` | Pull one contributor response into the review queue as a `SUPPLIER_ASSERTION` claim |
-| `GET /contributor/v1/requests/:token` | SUP-001 — the requested controls + entity name only; no tenant header |
+| `GET /contributor/v1/requests/:token` | SUP-001 — the requested controls + entity name only (plus any saved draft); no tenant header |
+| `PUT /contributor/v1/requests/:token/draft` | SUP-002 — save in-progress answers (mutable, one draft per request; cleared on submit) |
 | `POST /contributor/v1/requests/:token/submit` | SUP-003 — no-account submission (availability state per item); writes an immutable version, returns a receipt |
 | `GET /contributor/v1/requests/:token/receipt` | SUP-006 — receipt for the latest submission |
 

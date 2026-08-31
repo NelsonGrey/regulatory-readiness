@@ -148,6 +148,7 @@ export interface RequestDetail {
   items: RequestItem[]
   grants: RequestGrantView[]
   submissions: RequestSubmissionView[]
+  draftUpdatedAt: string | null
 }
 
 export interface ContributorItemView {
@@ -158,12 +159,27 @@ export interface ContributorItemView {
   required: boolean
 }
 
+export interface ContributorDraftItem {
+  requestItemId: string
+  value?: string | null
+  unit?: string | null
+  methodNote?: string | null
+  availabilityState?: AvailabilityState | null
+  comment?: string | null
+}
+
+export interface ContributorDraft {
+  submitterIdentity?: string | null
+  items: ContributorDraftItem[]
+}
+
 export interface ContributorView {
   requestingOrganization: string
   entityName: string
   dueAt: string | null
   status: RequestStatus
   items: ContributorItemView[]
+  draft: ContributorDraft | null
 }
 
 export interface ContributorReceipt {

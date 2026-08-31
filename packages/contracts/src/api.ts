@@ -83,3 +83,22 @@ export const ContributorSubmitRequest = z.object({
     .min(1),
 })
 export type ContributorSubmitRequest = z.infer<typeof ContributorSubmitRequest>
+
+/**
+ * PUT /contributor/v1/requests/:token/draft — save in-progress answers. Every
+ * field is optional (a draft may be half-filled) and the item list may be empty.
+ */
+export const ContributorDraftRequest = z.object({
+  submitterIdentity: z.string().optional(),
+  items: z.array(
+    z.object({
+      requestItemId: z.string().min(1),
+      value: z.string().optional(),
+      unit: z.string().optional(),
+      methodNote: z.string().optional(),
+      availabilityState: AvailabilityState.optional(),
+      comment: z.string().optional(),
+    }),
+  ),
+})
+export type ContributorDraftRequest = z.infer<typeof ContributorDraftRequest>

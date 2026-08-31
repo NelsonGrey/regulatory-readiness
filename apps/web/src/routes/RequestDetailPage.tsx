@@ -102,6 +102,12 @@ export function RequestDetailPage(): ReactElement {
               : 'revoked'}
           </dd>
         </div>
+        {detail.draftUpdatedAt ? (
+          <div>
+            <dt>Draft</dt>
+            <dd>in progress · saved {new Date(detail.draftUpdatedAt).toLocaleString()}</dd>
+          </div>
+        ) : null}
       </dl>
 
       {request.message ? <blockquote className="rre-note">{request.message}</blockquote> : null}

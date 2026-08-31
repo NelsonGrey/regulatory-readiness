@@ -66,7 +66,7 @@ suite('Postgres unit of work + RLS (integration)', () => {
     await adminPool.query(
       `TRUNCATE regulated_entity, entity_scope_evaluation, audit_event, outbox, claim,
         review_decision, evidence_request, request_item, access_token_grant,
-        contributor_submission, contributor_response_item`,
+        contributor_submission, contributor_response_item, request_draft`,
     )
   })
 
@@ -304,6 +304,52 @@ suite('Postgres unit of work + RLS (integration)', () => {
     await withTenant(appPool, 't-alpha', (c) =>
       c.query(`UPDATE access_token_grant SET uses = uses + 1, revoked_at = now()`),
     )
+  })
+
+  it('request_draft is RLS-scoped and mutable (upsert overwrites, submit-style delete works)', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'ed'), makeEvaluation('t-alpha', 'ed'))
+      await u.requests.insertRequest({
+        id: 'req_d',
+        tenantId: 't-alpha',
+        entityId: 'ed',
+        packKey: 'eaa-accessibility',
+        status: 'SENT',
+        message: null,
+        dueAt: null,
+        createdBy: 'tester',
+        createdAt: AT,
+      })
+      await u.requests.upsertDraft({
+        requestId: 'req_d',
+        tenantId: 't-alpha',
+        payload: { items: [{ requestItemId: 'rqi_d', value: 'v1' }] },
+        updatedAt: AT,
+      })
+    })
+
+    // upsert overwrites in place — still one row, new payload
+    await uow('t-alpha', (u) =>
+      u.requests.upsertDraft({
+        requestId: 'req_d',
+        tenantId: 't-alpha',
+        payload: { items: [{ requestItemId: 'rqi_d', value: 'v2' }] },
+        updatedAt: '2026-08-31T00:00:00.000Z',
+      }),
+    )
+    const draft = await uow('t-alpha', (u) => u.requests.getDraft('req_d'))
+    expect(draft?.payload).toEqual({ items: [{ requestItemId: 'rqi_d', value: 'v2' }] })
+
+    // another tenant sees nothing
+    expect(await uow('t-bravo', (u) => u.requests.getDraft('req_d'))).toBeNull()
+    const bravoRows = await withTenant(appPool, 't-bravo', (c) =>
+      c.query('SELECT request_id FROM request_draft'),
+    )
+    expect(bravoRows.rows).toEqual([])
+
+    // delete (what submit does) clears it
+    await uow('t-alpha', (u) => u.requests.deleteDraft('req_d'))
+    expect(await uow('t-alpha', (u) => u.requests.getDraft('req_d'))).toBeNull()
   })
 
   it('isolates evaluations by pack_key within a tenant', async () => {

@@ -2,6 +2,7 @@ import type { Pool, PoolClient } from 'pg'
 import type { AvailabilityState, RequestStatus } from '@rre/domain'
 import type {
   AccessGrantRecord,
+  DraftRecord,
   EvidenceRequestRecord,
   RequestItemRecord,
   RequestRepository,
@@ -106,6 +107,19 @@ const toSubmission = (r: SubmissionRow): SubmissionRecord => ({
   receiptId: r.receipt_id,
   submittedAt: r.submitted_at.toISOString(),
 })
+interface DraftRow {
+  request_id: string
+  tenant_id: string
+  payload: unknown
+  updated_at: Date
+}
+const toDraft = (r: DraftRow): DraftRecord => ({
+  requestId: r.request_id,
+  tenantId: r.tenant_id,
+  payload: r.payload,
+  updatedAt: r.updated_at.toISOString(),
+})
+
 const toResponse = (r: ResponseRow): ResponseItemRecord => ({
   id: r.id,
   tenantId: r.tenant_id,
@@ -293,5 +307,27 @@ export class PgRequestRepository implements RequestRepository {
       [requestId, this.tenantId],
     )
     return rows[0]?.max ?? 0
+  }
+
+  async getDraft(requestId: string): Promise<DraftRecord | null> {
+    const { rows } = await this.q<DraftRow>(
+      `SELECT * FROM request_draft WHERE request_id = $1 AND tenant_id = $2`,
+      [requestId, this.tenantId],
+    )
+    return rows[0] ? toDraft(rows[0]) : null
+  }
+  async upsertDraft(d: DraftRecord): Promise<void> {
+    await this.q(
+      `INSERT INTO request_draft (request_id, tenant_id, payload, updated_at)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (request_id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = EXCLUDED.updated_at`,
+      [d.requestId, d.tenantId, JSON.stringify(d.payload), d.updatedAt],
+    )
+  }
+  async deleteDraft(requestId: string): Promise<void> {
+    await this.q(`DELETE FROM request_draft WHERE request_id = $1 AND tenant_id = $2`, [
+      requestId,
+      this.tenantId,
+    ])
   }
 }

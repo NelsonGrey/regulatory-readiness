@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
-import { ContributorSubmitRequest } from '@rre/contracts'
+import { ContributorDraftRequest, ContributorSubmitRequest } from '@rre/contracts'
 import type { ContributorService } from '../services/requests.js'
 
 interface ContributorRoutesOptions extends FastifyPluginOptions {
@@ -54,6 +54,26 @@ export async function registerContributorRoutes(
     return reply
       .code(201)
       .send({ ...result.data, note: 'Received for review; not yet accepted or approved.' })
+  })
+
+  app.put('/requests/:token/draft', async (req, reply) => {
+    const { token } = req.params as { token: string }
+    const parsed = ContributorDraftRequest.safeParse(req.body)
+    if (!parsed.success) {
+      return reply.code(422).send({
+        error: {
+          code: 'INVALID_BODY',
+          message: 'invalid request body',
+          details: parsed.error.issues,
+        },
+      })
+    }
+    const result = await opts.contributor.saveDraft(token, parsed.data)
+    if (!result.ok) {
+      const code = result.code === 'INVALID_LINK' ? 404 : 422
+      return reply.code(code).send({ error: { code: result.code, message: result.message } })
+    }
+    return { ...result.data, note: 'Draft saved. Not submitted.' }
   })
 
   app.get('/requests/:token/receipt', async (req, reply) => {

@@ -119,4 +119,70 @@ describe('ContributorPortalPage', () => {
 
     expect(await screen.findByText(/required items unanswered/i)).toBeInTheDocument()
   })
+
+  it('rehydrates fields from a saved draft', async () => {
+    mockApi([
+      {
+        path: '/contributor/v1/requests/tok_1',
+        method: 'GET',
+        body: {
+          ...view,
+          draft: {
+            submitterIdentity: 'sam@supplier.example',
+            items: [
+              {
+                requestItemId: 'rqi_1',
+                availabilityState: 'VALUE_SUPPLIED',
+                value: 'saved alt text',
+              },
+              { requestItemId: 'rqi_2', availabilityState: 'UNAVAILABLE' },
+            ],
+          },
+        },
+      },
+    ])
+
+    renderRoute('/contribute/tok_1')
+    await screen.findByText(/information request from/i)
+
+    expect(screen.getByLabelText('Value', { selector: '#value-rqi_1' })).toHaveValue(
+      'saved alt text',
+    )
+    expect(screen.getByLabelText('Response', { selector: '#state-rqi_2' })).toHaveValue(
+      'UNAVAILABLE',
+    )
+    expect(screen.getByLabelText(/your name or email/i)).toHaveValue('sam@supplier.example')
+  })
+
+  it('saves progress without submitting', async () => {
+    const user = userEvent.setup()
+    const { calls } = mockApi([
+      { path: '/contributor/v1/requests/tok_1', method: 'GET', body: view },
+      {
+        path: '/contributor/v1/requests/tok_1/draft',
+        method: 'PUT',
+        body: { savedAt: '2026-08-31T09:00:00.000Z', note: 'Draft saved. Not submitted.' },
+      },
+    ])
+
+    renderRoute('/contribute/tok_1')
+    await screen.findByText(/information request from/i)
+
+    await user.type(screen.getByLabelText('Value', { selector: '#value-rqi_1' }), 'partial answer')
+    await user.click(screen.getByRole('button', { name: /save progress/i }))
+
+    await waitFor(() => {
+      const put = calls.find((c) => c.method === 'PUT')
+      expect(put?.url).toContain('/contributor/v1/requests/tok_1/draft')
+      expect(put?.body).toMatchObject({
+        items: [
+          { requestItemId: 'rqi_1', availabilityState: 'VALUE_SUPPLIED', value: 'partial answer' },
+          { requestItemId: 'rqi_2', availabilityState: 'VALUE_SUPPLIED' },
+        ],
+      })
+    })
+    expect(await screen.findByText(/progress saved/i)).toBeInTheDocument()
+    // No submission happened.
+    expect(calls.some((c) => c.method === 'POST')).toBe(false)
+  })
 })

@@ -65,6 +65,14 @@ export interface ResponseItemRecord {
   comment: string | null
 }
 
+/** A contributor's in-progress answers, overwritten on each save and cleared on submit. */
+export interface DraftRecord {
+  requestId: string
+  tenantId: string
+  payload: unknown
+  updatedAt: string
+}
+
 /** Transaction-scoped persistence port for the request loop. */
 export interface RequestRepository {
   insertRequest(r: EvidenceRequestRecord): Promise<void>
@@ -85,6 +93,10 @@ export interface RequestRepository {
   getSubmission(id: string): Promise<SubmissionRecord | null>
   listResponseItems(submissionId: string): Promise<ResponseItemRecord[]>
   maxSubmissionVersion(requestId: string): Promise<number>
+
+  getDraft(requestId: string): Promise<DraftRecord | null>
+  upsertDraft(d: DraftRecord): Promise<void>
+  deleteDraft(requestId: string): Promise<void>
 }
 
 /** Resolves a token to its grant BEFORE the tenant is known (access_token_grant has no RLS). */
@@ -205,6 +217,12 @@ export class RequestService {
         occurredAt: at,
         metadata: { entityId, controlCount: items.length, tokenPrefix: issued.prefix },
       })
+      await u.enqueue('request.created', {
+        requestId: request.id,
+        entityId,
+        packKey: found.entity.packKey,
+        controlCount: items.length,
+      })
 
       return { ok: true, request, items, token: issued.token, grant }
     })
@@ -238,11 +256,13 @@ export class RequestService {
         availabilityState: AvailabilityState
       }>
     }>
+    draftUpdatedAt: string | null
   } | null> {
     return this.uow(auth.tenantId, async (u) => {
       const request = await u.requests.getRequest(requestId)
       if (!request) return null
       const items = await u.requests.listItems(requestId)
+      const draft = await u.requests.getDraft(requestId)
       const grants = (await u.requests.listGrantsByRequest(requestId)).map((g) => ({
         tokenPrefix: g.tokenPrefix,
         expiresAt: g.expiresAt,
@@ -263,7 +283,7 @@ export class RequestService {
           })),
         })),
       )
-      return { request, items, grants, submissions }
+      return { request, items, grants, submissions, draftUpdatedAt: draft?.updatedAt ?? null }
     })
   }
 
@@ -280,6 +300,7 @@ export class RequestService {
         targetId: requestId,
         occurredAt: now.toISOString(),
       })
+      await u.enqueue('request.sent', { requestId, entityId: request.entityId })
       return true
     })
   }
@@ -300,6 +321,7 @@ export class RequestService {
         targetId: requestId,
         occurredAt: at,
       })
+      await u.enqueue('request.revoked', { requestId, entityId: request.entityId })
       return true
     })
   }
@@ -381,6 +403,8 @@ export interface ContributorView {
   dueAt: string | null
   status: RequestStatus
   items: ContributorItemView[]
+  /** The contributor's last saved draft (verbatim payload), or null. */
+  draft: unknown
 }
 
 export interface SubmitItemInput {
@@ -395,6 +419,20 @@ export interface SubmitItemInput {
 export interface SubmitInput {
   submitterIdentity?: string
   items: SubmitItemInput[]
+}
+
+export interface DraftItemInput {
+  requestItemId: string
+  value?: string
+  unit?: string
+  methodNote?: string
+  availabilityState?: AvailabilityState
+  comment?: string
+}
+
+export interface DraftInput {
+  submitterIdentity?: string
+  items: DraftItemInput[]
 }
 
 export type ContributorResult<T> =
@@ -430,6 +468,7 @@ export class ContributorService {
       if (!request) return { ok: false, code: 'INVALID_LINK', message: 'request not found' }
       const entity = await u.entities.get(request.entityId)
       const items = await u.requests.listItems(grant.requestId)
+      const draft = await u.requests.getDraft(grant.requestId)
       const pack = this.packs.get(request.packKey)
       const meta = new Map((pack?.loaded?.controls ?? []).map((c) => [c.key, c]))
       return {
@@ -446,8 +485,55 @@ export class ContributorService {
             instructions: i.instructions,
             required: i.requiredInRequest,
           })),
+          draft: draft?.payload ?? null,
         },
       }
+    })
+  }
+
+  async saveDraft(
+    token: string,
+    input: DraftInput,
+    now: Date = new Date(),
+  ): Promise<ContributorResult<{ savedAt: string }>> {
+    const grant = await this.resolveGrant(hashToken(token))
+    if (!grantUsable(grant, now)) {
+      return {
+        ok: false,
+        code: 'INVALID_LINK',
+        message: 'this link is invalid, expired, or revoked',
+      }
+    }
+    return this.uow(grant.tenantId, async (u) => {
+      const request = await u.requests.getRequest(grant.requestId)
+      if (!request) return { ok: false, code: 'INVALID_LINK', message: 'request not found' }
+      const known = new Set((await u.requests.listItems(grant.requestId)).map((i) => i.id))
+      for (const it of input.items) {
+        if (!known.has(it.requestItemId)) {
+          return {
+            ok: false,
+            code: 'UNKNOWN_ITEM',
+            message: `item ${it.requestItemId} is not part of this request`,
+          }
+        }
+      }
+      const at = now.toISOString()
+      await u.requests.upsertDraft({
+        requestId: grant.requestId,
+        tenantId: grant.tenantId,
+        payload: { submitterIdentity: input.submitterIdentity ?? null, items: input.items },
+        updatedAt: at,
+      })
+      await u.audit({
+        actorType: 'token',
+        actorId: grant.id,
+        action: 'request.draft_saved',
+        targetType: 'evidence_request',
+        targetId: grant.requestId,
+        occurredAt: at,
+        metadata: { itemCount: input.items.length },
+      })
+      return { ok: true, data: { savedAt: at } }
     })
   }
 
@@ -537,6 +623,7 @@ export class ContributorService {
       }
       await u.requests.setRequestStatus(grant.requestId, 'SUBMITTED')
       await u.requests.bumpGrantUses(grant.id)
+      await u.requests.deleteDraft(grant.requestId)
       await u.audit({
         actorType: 'token',
         actorId: grant.id,
@@ -545,6 +632,12 @@ export class ContributorService {
         targetId: grant.requestId,
         occurredAt: at,
         metadata: { submissionId, version, itemCount: input.items.length },
+      })
+      await u.enqueue('request.submitted', {
+        requestId: grant.requestId,
+        entityId: request.entityId,
+        submissionId,
+        version,
       })
 
       return {

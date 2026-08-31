@@ -9,6 +9,7 @@ import type { EntityRepository } from '../services/entities.js'
 import type { ClaimRecord, ClaimRepository, ReviewDecisionRecord } from '../services/claims.js'
 import type {
   AccessGrantRecord,
+  DraftRecord,
   EvidenceRequestRecord,
   RequestItemRecord,
   RequestRepository,
@@ -185,6 +186,7 @@ export interface InMemoryStores {
   grants: AccessGrantRecord[]
   submissions: SubmissionRecord[]
   responseItems: ResponseItemRecord[]
+  drafts: DraftRecord[]
 }
 
 export function createInMemoryStores(): InMemoryStores {
@@ -200,6 +202,7 @@ export function createInMemoryStores(): InMemoryStores {
     grants: [],
     submissions: [],
     responseItems: [],
+    drafts: [],
   }
 }
 
@@ -226,6 +229,8 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
     const stagedResponseItems: ResponseItemRecord[] = []
     const requestStatusOverrides = new Map<string, RequestStatus>()
     const grantOverrides = new Map<string, { revokedAt?: string; usesInc?: number }>()
+    const stagedDraftUpserts = new Map<string, DraftRecord>()
+    const stagedDraftDeletes = new Set<string>()
 
     const allRequests = (): EvidenceRequestRecord[] =>
       [...stores.requests, ...stagedRequests].map((r) => {
@@ -303,6 +308,23 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
           .filter((s) => s.tenantId === tenantId && s.requestId === requestId)
           .map((s) => s.submissionVersion)
         return v.length > 0 ? Math.max(...v) : 0
+      },
+      async getDraft(requestId) {
+        if (stagedDraftDeletes.has(requestId)) return null
+        const staged = stagedDraftUpserts.get(requestId)
+        if (staged) return staged
+        return (
+          stores.drafts.find((d) => d.requestId === requestId && d.tenantId === tenantId) ?? null
+        )
+      },
+      async upsertDraft(d) {
+        if (d.tenantId !== tenantId) throw new Error('unit-of-work tenant mismatch')
+        stagedDraftDeletes.delete(d.requestId)
+        stagedDraftUpserts.set(d.requestId, { ...d })
+      },
+      async deleteDraft(requestId) {
+        stagedDraftUpserts.delete(requestId)
+        stagedDraftDeletes.add(requestId)
       },
     }
 
@@ -435,6 +457,18 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       if (g) {
         if (o.revokedAt !== undefined) g.revokedAt = o.revokedAt
         if (o.usesInc) g.uses += o.usesInc
+      }
+    }
+    if (stagedDraftDeletes.size > 0) {
+      stores.drafts = stores.drafts.filter((d) => !stagedDraftDeletes.has(d.requestId))
+    }
+    for (const [requestId, d] of stagedDraftUpserts) {
+      const existing = stores.drafts.find((x) => x.requestId === requestId)
+      if (existing) {
+        existing.payload = d.payload
+        existing.updatedAt = d.updatedAt
+      } else {
+        stores.drafts.push(d)
       }
     }
     return result
