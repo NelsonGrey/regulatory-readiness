@@ -153,6 +153,7 @@ export function Shell(): ReactElement {
             <Link to="/w/settings/members">Team</Link>
             <Link to="/w/settings/billing">Billing</Link>
             <Link to="/w/settings/deletion">Data &amp; deletion</Link>
+            <Link to="/w/admin/packs">Pack governance</Link>
           </nav>
         </div>
         <div className="rre-workspace">

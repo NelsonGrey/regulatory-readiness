@@ -444,6 +444,36 @@ export interface EntityList {
   entities: EntitySummary[]
 }
 
+export interface PackActivation {
+  packKey: string
+  checksum: string
+  status: 'active' | 'withdrawn'
+  activatedBy: string
+  activatedAt: string
+  withdrawnBy: string | null
+  withdrawnAt: string | null
+}
+
+export interface PackOverview {
+  packKey: string
+  title: string | null
+  onDiskStatus: string | null
+  computedChecksum: string
+  valid: boolean
+  issues: Array<{ severity: string; code: string; message: string }>
+  reviews: Array<{ reviewer: string; note: string | null; at: string }>
+  distinctReviewers: number
+  activation: PackActivation | null
+  effectiveStatus: string
+  driftedSinceActivation: boolean
+  canActivate: boolean
+  blockers: string[]
+}
+
+export interface PackOverviewList {
+  packs: PackOverview[]
+}
+
 export interface BillingSummary {
   plan: 'trial' | 'starter' | 'growth'
   status: 'trialing' | 'active' | 'past_due' | 'canceled'

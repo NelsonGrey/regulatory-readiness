@@ -18,6 +18,7 @@ import { MembersPage } from './routes/MembersPage.js'
 import { JoinPage } from './routes/JoinPage.js'
 import { BillingPage } from './routes/BillingPage.js'
 import { OnboardingPage } from './routes/OnboardingPage.js'
+import { PackGovernancePage } from './routes/PackGovernancePage.js'
 
 export const routes: RouteObject[] = [
   {
@@ -43,6 +44,7 @@ export const routes: RouteObject[] = [
       { path: 'w/settings/members', element: <MembersPage /> },
       { path: 'w/settings/billing', element: <BillingPage /> },
       { path: 'w/settings/deletion', element: <DeletionPage /> },
+      { path: 'w/admin/packs', element: <PackGovernancePage /> },
     ],
   },
   // Accept a workspace invite — needs a signed-in person but not a workspace yet.
