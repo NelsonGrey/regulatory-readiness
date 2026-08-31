@@ -7,7 +7,17 @@ to SQS; `@rre/worker` consumes it.
 
 ```bash
 pnpm --filter @rre/api dev     # tsx watch, http://localhost:3000
+DEV_AUTH=1 pnpm --filter @rre/api dev   # trust x-user-email as an owner (no membership needed)
 ```
+
+## Auth
+
+Every workspace-scoped route (all of `/api/v1/*` except the control plane below
+and `/packs`) is behind one `preHandler` that resolves the signed-in person
+(`x-user-email`, the dev stand-in for an IdP session) and their `membership`
+role in the `x-tenant-id` workspace. No identity → 401; not a member → 403.
+Owner-only capabilities (deleting the workspace) are checked per route. Set
+`DEV_AUTH=1` to skip the membership lookup and treat any caller as an `owner`.
 
 ## Routes
 

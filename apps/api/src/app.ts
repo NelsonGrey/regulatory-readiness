@@ -19,6 +19,7 @@ import {
   type AccountsRepository,
 } from './services/accounts.js'
 import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
+import { registerWorkspaceAuth } from './auth-hook.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerPackRoutes } from './routes/packs.js'
 import { registerEntityRoutes } from './routes/entities.js'
@@ -57,6 +58,12 @@ export interface BuildAppOptions {
   maxDocumentBytes?: number
   /** Tenancy control plane (users / workspaces / memberships). Defaults to in-memory. */
   accounts?: AccountsRepository
+  /**
+   * Dev stand-in for the membership hook: synthesise an `owner` from headers
+   * when no real membership exists. Off by default — production refuses a
+   * request that is not backed by a `membership`.
+   */
+  devAuth?: boolean
 }
 
 /**
@@ -78,6 +85,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const resolve: ResolveGrant = resolveGrant ?? (async () => null)
   const objectStore = options.objectStore ?? createLocalObjectStore()
   const accountsRepo = options.accounts ?? new InMemoryAccountsRepository()
+  const accountsService = new AccountsService(accountsRepo, unitOfWork)
 
   const app = Fastify({ logger: false })
 
@@ -94,6 +102,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.register(
     async (v1) => {
+      registerWorkspaceAuth(v1, { accounts: accountsService, devAuth: options.devAuth ?? false })
       const registry = options.packRegistry ?? (await getPackRegistry(packsDir))
       await registerPackRoutes(v1, { registry })
       await registerEntityRoutes(v1, { entities: new EntityService(unitOfWork, registry) })
@@ -117,9 +126,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       await registerTenantAdminRoutes(v1, {
         tenantAdmin: new TenantAdminService(unitOfWork, objectStore),
       })
-      await registerAccountRoutes(v1, {
-        accounts: new AccountsService(accountsRepo, unitOfWork),
-      })
+      await registerAccountRoutes(v1, { accounts: accountsService })
     },
     { prefix: '/api/v1' },
   )

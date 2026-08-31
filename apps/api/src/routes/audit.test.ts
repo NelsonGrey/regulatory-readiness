@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { FastifyInstance } from 'fastify'
-import { buildApp } from '../app.js'
+import { buildTestApp } from '../acceptance/helpers.js'
 import { createInMemoryStores, inMemoryUnitOfWork, type InMemoryStores } from '../db/uow.js'
 import { bankEntityRequest } from '../acceptance/helpers.js'
 
@@ -10,7 +10,7 @@ describe('GET /api/v1/audit-events', () => {
 
   beforeEach(async () => {
     stores = createInMemoryStores()
-    app = buildApp({ logLevel: 'error', unitOfWork: inMemoryUnitOfWork(stores) })
+    app = buildTestApp({ logLevel: 'error', unitOfWork: inMemoryUnitOfWork(stores) })
   })
 
   const createEntity = (tenant = 't-alpha', identifier = 'e-1') =>

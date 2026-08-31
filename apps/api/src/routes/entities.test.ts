@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { buildApp } from '../app.js'
+import { buildTestApp } from '../acceptance/helpers.js'
 
 const bankFacts = {
   offeredToConsumersInIE: true,
@@ -23,13 +23,13 @@ const createBody = {
   facts: bankFacts,
 }
 
-type App = ReturnType<typeof buildApp>
+type App = ReturnType<typeof buildTestApp>
 
 describe('POST /api/v1/entities + matrix', () => {
   let app: App
 
   beforeEach(() => {
-    app = buildApp({ logLevel: 'error' })
+    app = buildTestApp({ logLevel: 'error' })
   })
 
   it('creates an entity with an immutable scope evaluation', async () => {

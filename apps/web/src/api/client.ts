@@ -29,6 +29,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       'content-type': 'application/json',
       'x-tenant-id': getTenant(),
       'x-actor': 'operator@local',
+      'x-user-email': 'operator@local',
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
@@ -43,7 +44,11 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 async function requestText(path: string): Promise<string> {
   const res = await fetch(BASE + path, {
     method: 'GET',
-    headers: { 'x-tenant-id': getTenant(), 'x-actor': 'operator@local' },
+    headers: {
+      'x-tenant-id': getTenant(),
+      'x-actor': 'operator@local',
+      'x-user-email': 'operator@local',
+    },
   })
   const text = await res.text()
   if (!res.ok) {
@@ -63,7 +68,11 @@ async function requestText(path: string): Promise<string> {
 async function requestBlob(url: string): Promise<Blob> {
   const res = await fetch(url, {
     method: 'GET',
-    headers: { 'x-tenant-id': getTenant(), 'x-actor': 'operator@local' },
+    headers: {
+      'x-tenant-id': getTenant(),
+      'x-actor': 'operator@local',
+      'x-user-email': 'operator@local',
+    },
   })
   if (!res.ok) throw new ApiError(res.status, null)
   return res.blob()
@@ -76,6 +85,7 @@ async function putBytes(url: string, body: BodyInit): Promise<void> {
       'content-type': 'application/octet-stream',
       'x-tenant-id': getTenant(),
       'x-actor': 'operator@local',
+      'x-user-email': 'operator@local',
     },
     body,
   })

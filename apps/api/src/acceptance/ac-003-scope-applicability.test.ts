@@ -6,10 +6,10 @@
 import { describe, expect, it } from 'vitest'
 import type { FastifyInstance } from 'fastify'
 import type { ApplicabilitySummary } from '@rre/domain'
-import { buildApp } from '../app.js'
 import {
   APPLICABILITY_RESULTS,
   bankEntityRequest,
+  buildTestApp,
   createEntity,
   getMatrix,
   TENANT,
@@ -19,7 +19,7 @@ describe('AC-003 — entity scope and applicability', () => {
   let app: FastifyInstance
 
   const withApp = async (fn: (app: FastifyInstance) => Promise<void>): Promise<void> => {
-    app = buildApp({ logLevel: 'error' })
+    app = buildTestApp({ logLevel: 'error' })
     try {
       await fn(app)
     } finally {
@@ -79,7 +79,7 @@ describe('AC-003 — entity scope and applicability', () => {
 
 describe('AC-004 — truthful readiness matrix', () => {
   const withApp = async (fn: (app: FastifyInstance) => Promise<void>): Promise<void> => {
-    const app = buildApp({ logLevel: 'error' })
+    const app = buildTestApp({ logLevel: 'error' })
     try {
       await fn(app)
     } finally {

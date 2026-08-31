@@ -6,16 +6,15 @@
  */
 import { describe, expect, it } from 'vitest'
 import type { FastifyInstance } from 'fastify'
-import { buildApp } from '../app.js'
 import { createInMemoryStores, inMemoryUnitOfWork } from '../db/uow.js'
-import { bankEntityRequest, type InjectResponse } from './helpers.js'
+import { bankEntityRequest, type InjectResponse, buildTestApp } from './helpers.js'
 
 const headers = { 'x-tenant-id': 't-demo', 'x-actor': 'owner@acme' }
 const otherHeaders = { 'x-tenant-id': 't-other', 'x-actor': 'owner@else' }
 
 describe('AC-021b — data export + tenant deletion', () => {
   const withApp = async (fn: (app: FastifyInstance) => Promise<void>): Promise<void> => {
-    const app = buildApp({
+    const app = buildTestApp({
       logLevel: 'error',
       unitOfWork: inMemoryUnitOfWork(createInMemoryStores()),
     })

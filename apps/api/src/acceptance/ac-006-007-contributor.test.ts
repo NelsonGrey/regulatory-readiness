@@ -6,9 +6,8 @@ import { fileURLToPath } from 'node:url'
 import { beforeAll, describe, expect, it } from 'vitest'
 import type { FastifyInstance } from 'fastify'
 import { PackRegistry } from '../pack-registry.js'
-import { buildApp } from '../app.js'
 import { createInMemoryStores, inMemoryUnitOfWork } from '../db/uow.js'
-import { bankEntityRequest } from './helpers.js'
+import { bankEntityRequest, buildTestApp } from './helpers.js'
 
 const PACKS_DIR = fileURLToPath(new URL('../../../../packs', import.meta.url))
 const op = { 'x-tenant-id': 't-demo', 'x-actor': 'manager@acme' }
@@ -21,7 +20,7 @@ beforeAll(async () => {
 
 function freshApp(): FastifyInstance {
   const stores = createInMemoryStores()
-  return buildApp({
+  return buildTestApp({
     logLevel: 'error',
     packRegistry: registry,
     unitOfWork: inMemoryUnitOfWork(stores),

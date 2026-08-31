@@ -5,9 +5,8 @@
  */
 import { describe, expect, it } from 'vitest'
 import type { FastifyInstance } from 'fastify'
-import { buildApp } from '../app.js'
 import { createInMemoryStores, inMemoryUnitOfWork, type InMemoryStores } from '../db/uow.js'
-import { bankEntityRequest } from './helpers.js'
+import { bankEntityRequest, buildTestApp } from './helpers.js'
 
 const headers = { 'x-tenant-id': 't-demo', 'x-actor': 'manager@acme' }
 
@@ -16,7 +15,7 @@ describe('AC-009 — control-snapshot impact', () => {
     fn: (app: FastifyInstance, stores: InMemoryStores) => Promise<void>,
   ): Promise<void> => {
     const stores = createInMemoryStores()
-    const app = buildApp({ logLevel: 'error', unitOfWork: inMemoryUnitOfWork(stores) })
+    const app = buildTestApp({ logLevel: 'error', unitOfWork: inMemoryUnitOfWork(stores) })
     try {
       await fn(app, stores)
     } finally {

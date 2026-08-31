@@ -5,15 +5,17 @@
  */
 import { describe, expect, it } from 'vitest'
 import type { FastifyInstance } from 'fastify'
-import { buildApp } from '../app.js'
 import { createInMemoryStores, inMemoryUnitOfWork } from '../db/uow.js'
-import { bankEntityRequest, getMatrix } from './helpers.js'
+import { bankEntityRequest, getMatrix, buildTestApp } from './helpers.js'
 
 describe('AC-018 — audit reconstruction', () => {
   let app: FastifyInstance
 
   const withApp = async (fn: (app: FastifyInstance) => Promise<void>): Promise<void> => {
-    app = buildApp({ logLevel: 'error', unitOfWork: inMemoryUnitOfWork(createInMemoryStores()) })
+    app = buildTestApp({
+      logLevel: 'error',
+      unitOfWork: inMemoryUnitOfWork(createInMemoryStores()),
+    })
     try {
       await fn(app)
     } finally {

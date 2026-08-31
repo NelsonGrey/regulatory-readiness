@@ -1,9 +1,20 @@
 import type { FastifyInstance } from 'fastify'
+import { buildApp, type BuildAppOptions } from '../app.js'
 
 export type InjectResponse = Awaited<ReturnType<FastifyInstance['inject']>>
 
 export const TENANT = 't-demo'
 export const ACTOR = 'manager@acme'
+
+/**
+ * A test app with the membership hook in its dev stand-in mode: an `x-tenant-id`
+ * header is still required, but any `x-actor` / `x-user-email` is trusted as an
+ * `owner` without a seeded `membership`. Tests that assert real membership
+ * behaviour use `buildApp({ devAuth: false, ... })` directly.
+ */
+export function buildTestApp(options: BuildAppOptions = {}): FastifyInstance {
+  return buildApp({ logLevel: 'error', devAuth: true, ...options })
+}
 
 export const APPLICABILITY_RESULTS = [
   'REQUIRED_BY_SNAPSHOT',

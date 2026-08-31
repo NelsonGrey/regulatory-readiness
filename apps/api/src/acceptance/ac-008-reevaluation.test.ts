@@ -6,16 +6,15 @@
  */
 import { describe, expect, it } from 'vitest'
 import type { FastifyInstance } from 'fastify'
-import { buildApp } from '../app.js'
 import { createInMemoryStores, inMemoryUnitOfWork } from '../db/uow.js'
-import { bankEntityRequest, type InjectResponse } from './helpers.js'
+import { bankEntityRequest, type InjectResponse, buildTestApp } from './helpers.js'
 
 const CONTROL = 'EAA-EN549-9-1-1-1'
 const headers = { 'x-tenant-id': 't-demo', 'x-actor': 'manager@acme' }
 
 describe('AC-008 — readiness re-assessment', () => {
   const withApp = async (fn: (app: FastifyInstance) => Promise<void>): Promise<void> => {
-    const app = buildApp({
+    const app = buildTestApp({
       logLevel: 'error',
       unitOfWork: inMemoryUnitOfWork(createInMemoryStores()),
     })

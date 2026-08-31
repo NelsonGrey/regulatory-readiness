@@ -78,6 +78,7 @@ async function main(): Promise<void> {
     objectStore,
     maxDocumentBytes,
     accounts,
+    devAuth: process.env.DEV_AUTH === '1',
   })
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {

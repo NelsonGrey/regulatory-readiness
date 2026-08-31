@@ -1,18 +1,30 @@
 import { createHash } from 'node:crypto'
 import type { FastifyRequest } from 'fastify'
+import type { Role } from './rbac.js'
 
 /**
- * The authenticated caller. In production this comes from an OIDC session and the
- * tenant is bound to a Postgres `SET LOCAL app.tenant_id` per transaction
- * (ADR 0002/0003). For local development the tenant and actor are read from
- * headers — a stand-in, not the real auth path.
+ * The authenticated caller for a workspace-scoped request. Populated by the
+ * membership pre-handler (`auth-hook.ts`) once the signed-in person has been
+ * resolved to a `membership` in the `x-tenant-id` workspace. `actor` is the
+ * person's email (or `dev@local` under the dev stand-in).
  */
 export interface AuthContext {
   tenantId: string
   actor: string
 }
 
+declare module 'fastify' {
+  interface FastifyRequest {
+    /** Set by the membership pre-handler for every workspace-scoped route. */
+    auth?: AuthContext
+    /** The caller's role in `auth.tenantId`, for per-route capability checks. */
+    workspaceRole?: Role
+  }
+}
+
 export function authFromRequest(req: FastifyRequest): AuthContext | null {
+  if (req.auth) return req.auth
+  // Fallback for routes not behind the membership hook (kept for safety).
   const tenantId = req.headers['x-tenant-id']
   if (typeof tenantId !== 'string' || tenantId.length === 0) return null
   const actor = req.headers['x-actor']

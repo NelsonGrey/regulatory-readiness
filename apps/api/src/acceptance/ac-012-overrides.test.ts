@@ -6,16 +6,15 @@
  */
 import { describe, expect, it } from 'vitest'
 import type { FastifyInstance } from 'fastify'
-import { buildApp } from '../app.js'
 import { createInMemoryStores, inMemoryUnitOfWork } from '../db/uow.js'
-import { bankEntityRequest, type InjectResponse } from './helpers.js'
+import { bankEntityRequest, type InjectResponse, buildTestApp } from './helpers.js'
 
 const CONTROL = 'EAA-EN549-9-2-4-7' // "Web: keyboard focus indicator is visible" — REQUIRED for the bank fixture
 const headers = { 'x-tenant-id': 't-demo', 'x-actor': 'approver@acme' }
 
 describe('AC-012 — applicability override', () => {
   const withApp = async (fn: (app: FastifyInstance) => Promise<void>): Promise<void> => {
-    const app = buildApp({
+    const app = buildTestApp({
       logLevel: 'error',
       unitOfWork: inMemoryUnitOfWork(createInMemoryStores()),
     })
