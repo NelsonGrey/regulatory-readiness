@@ -6,16 +6,18 @@ import {
   InviteMemberRequest,
   SignUpRequest,
 } from '@rre/contracts'
-import { principalFromRequest, type Principal } from '../auth.js'
+import type { Principal } from '../auth.js'
+import type { PrincipalVerifier } from '../auth/verifier.js'
 import { can, type Role } from '../rbac.js'
 import type { AccountsService } from '../services/accounts.js'
 
 interface AccountRoutesOptions extends FastifyPluginOptions {
   accounts: AccountsService
+  verifier: PrincipalVerifier
 }
 
 const NO_PRINCIPAL = {
-  error: { code: 'NO_PRINCIPAL', message: 'x-user-email (signed-in identity) is required' },
+  error: { code: 'NO_PRINCIPAL', message: 'a signed-in identity is required' },
 }
 const NO_TENANT = { error: { code: 'NO_TENANT', message: 'x-tenant-id header is required' } }
 
@@ -37,7 +39,7 @@ export async function registerAccountRoutes(
     req: FastifyRequest,
     reply: FastifyReply,
   ): Promise<{ principal: Principal; tenantId: string; role: Role } | null> {
-    const principal = principalFromRequest(req)
+    const principal = await opts.verifier.verify(req)
     if (!principal) {
       reply.code(401).send(NO_PRINCIPAL)
       return null
@@ -58,7 +60,7 @@ export async function registerAccountRoutes(
   }
 
   app.post('/sign-up', async (req, reply) => {
-    const principal = principalFromRequest(req)
+    const principal = await opts.verifier.verify(req)
     if (!principal) return reply.code(401).send(NO_PRINCIPAL)
     const parsed = SignUpRequest.safeParse(req.body)
     if (!parsed.success) return invalidBody(reply, parsed.error.issues)
@@ -67,7 +69,7 @@ export async function registerAccountRoutes(
   })
 
   app.get('/workspaces', async (req, reply) => {
-    const principal = principalFromRequest(req)
+    const principal = await opts.verifier.verify(req)
     if (!principal) return reply.code(401).send(NO_PRINCIPAL)
     const rows = await accounts.myWorkspaces(principal)
     return {
@@ -82,7 +84,7 @@ export async function registerAccountRoutes(
   })
 
   app.post('/workspaces', async (req, reply) => {
-    const principal = principalFromRequest(req)
+    const principal = await opts.verifier.verify(req)
     if (!principal) return reply.code(401).send(NO_PRINCIPAL)
     const parsed = CreateWorkspaceRequest.safeParse(req.body)
     if (!parsed.success) return invalidBody(reply, parsed.error.issues)
@@ -91,7 +93,7 @@ export async function registerAccountRoutes(
   })
 
   app.post('/invites/accept', async (req, reply) => {
-    const principal = principalFromRequest(req)
+    const principal = await opts.verifier.verify(req)
     if (!principal) return reply.code(401).send(NO_PRINCIPAL)
     const parsed = AcceptInviteRequest.safeParse(req.body)
     if (!parsed.success) return invalidBody(reply, parsed.error.issues)

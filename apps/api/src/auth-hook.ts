@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
-import { principalFromRequest } from './auth.js'
 import type { AccountsService } from './services/accounts.js'
+import type { PrincipalVerifier } from './auth/verifier.js'
 
 /**
  * Path prefixes under `/api/v1` that are NOT workspace-scoped: the tenancy
@@ -21,6 +21,8 @@ function isOpen(path: string): boolean {
 
 export interface WorkspaceAuthOptions {
   accounts: AccountsService
+  /** Resolves the signed-in person (header stand-in or a real IdP token). */
+  verifier: PrincipalVerifier
   /**
    * Dev stand-in: when no real `membership` backs the request, synthesise an
    * `owner` from the headers (still requires `x-tenant-id`). Production leaves
@@ -47,7 +49,7 @@ export function registerWorkspaceAuth(app: FastifyInstance, opts: WorkspaceAuthO
         .send({ error: { code: 'NO_TENANT', message: 'x-tenant-id header is required' } })
     }
 
-    const principal = principalFromRequest(req)
+    const principal = await opts.verifier.verify(req)
     if (!principal) {
       if (opts.devAuth) {
         req.auth = { tenantId, actor: 'dev@local' }
@@ -55,7 +57,7 @@ export function registerWorkspaceAuth(app: FastifyInstance, opts: WorkspaceAuthO
         return
       }
       return reply.code(401).send({
-        error: { code: 'NO_PRINCIPAL', message: 'x-user-email (signed-in identity) is required' },
+        error: { code: 'NO_PRINCIPAL', message: 'a signed-in identity is required' },
       })
     }
 

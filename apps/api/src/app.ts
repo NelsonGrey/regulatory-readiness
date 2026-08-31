@@ -20,6 +20,7 @@ import {
 } from './services/accounts.js'
 import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
 import { registerWorkspaceAuth } from './auth-hook.js'
+import { headerVerifier, type PrincipalVerifier } from './auth/verifier.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerPackRoutes } from './routes/packs.js'
 import { registerEntityRoutes } from './routes/entities.js'
@@ -58,6 +59,8 @@ export interface BuildAppOptions {
   maxDocumentBytes?: number
   /** Tenancy control plane (users / workspaces / memberships). Defaults to in-memory. */
   accounts?: AccountsRepository
+  /** Resolves the signed-in person. Defaults to the `x-user-email` header stand-in. */
+  principalVerifier?: PrincipalVerifier
   /**
    * Dev stand-in for the membership hook: synthesise an `owner` from headers
    * when no real membership exists. Off by default — production refuses a
@@ -86,6 +89,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const objectStore = options.objectStore ?? createLocalObjectStore()
   const accountsRepo = options.accounts ?? new InMemoryAccountsRepository()
   const accountsService = new AccountsService(accountsRepo, unitOfWork)
+  const verifier = options.principalVerifier ?? headerVerifier()
 
   const app = Fastify({ logger: false })
 
@@ -102,7 +106,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   app.register(
     async (v1) => {
-      registerWorkspaceAuth(v1, { accounts: accountsService, devAuth: options.devAuth ?? false })
+      registerWorkspaceAuth(v1, {
+        accounts: accountsService,
+        verifier,
+        devAuth: options.devAuth ?? false,
+      })
       const registry = options.packRegistry ?? (await getPackRegistry(packsDir))
       await registerPackRoutes(v1, { registry })
       await registerEntityRoutes(v1, { entities: new EntityService(unitOfWork, registry) })
@@ -126,7 +134,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       await registerTenantAdminRoutes(v1, {
         tenantAdmin: new TenantAdminService(unitOfWork, objectStore),
       })
-      await registerAccountRoutes(v1, { accounts: accountsService })
+      await registerAccountRoutes(v1, { accounts: accountsService, verifier })
     },
     { prefix: '/api/v1' },
   )

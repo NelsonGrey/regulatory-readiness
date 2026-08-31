@@ -10,6 +10,7 @@ import {
 import { pgResolveGrant } from './repositories/requests.pg.js'
 import { PgAccountsRepository } from './repositories/accounts.pg.js'
 import { InMemoryAccountsRepository, type AccountsRepository } from './services/accounts.js'
+import { headerVerifier, jwtVerifier, type PrincipalVerifier } from './auth/verifier.js'
 import type { ResolveGrant } from './services/requests.js'
 import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
 import { createS3ObjectStore } from './storage/object-store.s3.js'
@@ -67,6 +68,23 @@ async function main(): Promise<void> {
   const objectStore = buildObjectStore()
   log.info('object store', { kind: objectStore.kind })
 
+  // A real IdP when AUTH_JWT_ISSUER + AUTH_JWKS_URI are set; the header stand-in
+  // otherwise. Works with any RS256 OIDC provider (Clerk, WorkOS, Auth0, …).
+  let principalVerifier: PrincipalVerifier
+  const jwtIssuer = process.env.AUTH_JWT_ISSUER
+  const jwksUri = process.env.AUTH_JWKS_URI
+  if (jwtIssuer && jwksUri) {
+    principalVerifier = jwtVerifier({
+      issuer: jwtIssuer,
+      jwksUri,
+      audience: process.env.AUTH_JWT_AUDIENCE,
+    })
+    log.info('auth', { verifier: 'jwt', issuer: jwtIssuer })
+  } else {
+    principalVerifier = headerVerifier()
+    log.warn('auth', { verifier: 'header-stand-in' })
+  }
+
   const maxDocumentBytes = process.env.DOCUMENT_MAX_BYTES
     ? Number(process.env.DOCUMENT_MAX_BYTES)
     : undefined
@@ -78,6 +96,7 @@ async function main(): Promise<void> {
     objectStore,
     maxDocumentBytes,
     accounts,
+    principalVerifier,
     devAuth: process.env.DEV_AUTH === '1',
   })
 

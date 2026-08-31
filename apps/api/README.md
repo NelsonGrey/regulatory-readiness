@@ -13,11 +13,16 @@ DEV_AUTH=1 pnpm --filter @rre/api dev   # trust x-user-email as an owner (no mem
 ## Auth
 
 Every workspace-scoped route (all of `/api/v1/*` except the control plane below
-and `/packs`) is behind one `preHandler` that resolves the signed-in person
-(`x-user-email`, the dev stand-in for an IdP session) and their `membership`
-role in the `x-tenant-id` workspace. No identity → 401; not a member → 403.
-Owner-only capabilities (deleting the workspace) are checked per route. Set
-`DEV_AUTH=1` to skip the membership lookup and treat any caller as an `owner`.
+and `/packs`) is behind one `preHandler` that resolves the signed-in person and
+their `membership` role in the `x-tenant-id` workspace. No identity → 401; not a
+member → 403. Owner-only capabilities (deleting the workspace) are checked per
+route. Set `DEV_AUTH=1` to skip the membership lookup and treat any caller as an
+`owner`.
+
+Identity is resolved by a `PrincipalVerifier`: set `AUTH_JWT_ISSUER` +
+`AUTH_JWKS_URI` (and optionally `AUTH_JWT_AUDIENCE`) to accept RS256 bearer
+tokens from an OIDC provider (Clerk, WorkOS, Auth0, …); otherwise the dev
+stand-in trusts the `x-user-email` header.
 
 ## Routes
 
