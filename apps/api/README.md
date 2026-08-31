@@ -45,6 +45,9 @@ pnpm --filter @rre/api dev     # tsx watch, http://localhost:3000
 | `POST /api/v1/extraction-proposals/:id/reject` | Reject a proposal (a reason is required) |
 | `POST /api/v1/entities/:id/controls/:controlKey/applicability-override` | Record a reasoned applicability override (never changes the snapshot) |
 | `GET /api/v1/entities/:id/applicability-overrides`, `POST /api/v1/applicability-overrides/:id/revoke` | List / withdraw overrides |
+| `GET /api/v1/export/tenant` | A JSON attachment: per-table row counts + a full dump of every record held for the tenant (audited `tenant.exported`) |
+| `POST /api/v1/deletion-requests`, `GET /api/v1/deletion-requests` | Record a tenant-deletion request (the `confirmation` must equal the workspace id) with an impact preview / list requests |
+| `POST /api/v1/deletion-requests/:id/execute` | Re-check the confirmation, then purge every tenant row + object in one transaction, keeping a `COMPLETED` tombstone and a single `deletion.completed` audit row (TRD §21) |
 | `GET /contributor/v1/requests/:token` | SUP-001 — the requested controls + entity name only (plus any saved draft); no tenant header |
 | `PUT /contributor/v1/requests/:token/draft` | SUP-002 — save in-progress answers (mutable, one draft per request; cleared on submit) |
 | `POST /contributor/v1/requests/:token/submit` | SUP-003 — no-account submission (availability state per item); writes an immutable version, returns a receipt |

@@ -346,6 +346,34 @@ export interface CreateSnapshotResponse {
   createdAt: string
 }
 
+export interface DeletionRequestRecord {
+  id: string
+  tenantId: string
+  scope: 'tenant'
+  status: 'REQUESTED' | 'COMPLETED' | 'CANCELLED'
+  preview: Record<string, number>
+  purged: Record<string, number> | null
+  requestedBy: string
+  requestedAt: string
+  completedBy: string | null
+  completedAt: string | null
+}
+
+export interface DeletionRequestList {
+  deletionRequests: DeletionRequestRecord[]
+}
+
+export interface RequestDeletionResponse {
+  deletionRequestId: string
+  preview: Record<string, number>
+}
+
+export interface ExecuteDeletionResponse {
+  ok: true
+  purged: Record<string, number>
+  objectsRemoved: number
+}
+
 export interface EntityMatrix {
   entity: {
     id: string

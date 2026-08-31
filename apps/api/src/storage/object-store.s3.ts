@@ -1,7 +1,9 @@
 import {
   CopyObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3'
@@ -79,6 +81,30 @@ export function createS3ObjectStore(cfg: S3ObjectStoreConfig): ObjectStore {
         new GetObjectCommand({ Bucket: bucketFor(key), Key: name(key) }),
         { expiresIn: ttl },
       )
+    },
+    async deleteTenant(tenantId) {
+      let removed = 0
+      for (const bucket of [cfg.quarantineBucket, cfg.originalsBucket]) {
+        let token: string | undefined
+        do {
+          const listed = await client.send(
+            new ListObjectsV2Command({
+              Bucket: bucket,
+              Prefix: `${tenantId}/`,
+              ContinuationToken: token,
+            }),
+          )
+          const keys = (listed.Contents ?? []).map((o) => ({ Key: o.Key! })).filter((o) => o.Key)
+          if (keys.length > 0) {
+            await client.send(
+              new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: keys } }),
+            )
+            removed += keys.length
+          }
+          token = listed.IsTruncated ? listed.NextContinuationToken : undefined
+        } while (token)
+      }
+      return removed
     },
   }
 }

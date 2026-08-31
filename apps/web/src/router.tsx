@@ -12,6 +12,7 @@ import { DocumentsPage } from './routes/DocumentsPage.js'
 import { ExtractionReviewPage } from './routes/ExtractionReviewPage.js'
 import { PackImpactPage } from './routes/PackImpactPage.js'
 import { ContributorPortalPage } from './routes/ContributorPortalPage.js'
+import { DeletionPage } from './routes/DeletionPage.js'
 
 export const routes: RouteObject[] = [
   {
@@ -32,6 +33,7 @@ export const routes: RouteObject[] = [
         element: <ExtractionReviewPage />,
       },
       { path: 'w/notifications', element: <NotificationsPage /> },
+      { path: 'w/settings/deletion', element: <DeletionPage /> },
     ],
   },
   // No-account contributor portal — deliberately outside the operator shell.

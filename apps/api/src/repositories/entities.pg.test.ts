@@ -68,7 +68,7 @@ suite('Postgres unit of work + RLS (integration)', () => {
         review_decision, evidence_request, request_item, access_token_grant,
         contributor_submission, contributor_response_item, request_draft, readiness_snapshot,
         notification, document, document_association, evidence_location, claim_evidence_link,
-        extraction_run, extraction_proposal, applicability_override`,
+        extraction_run, extraction_proposal, applicability_override, deletion_request`,
     )
   })
 
@@ -751,6 +751,128 @@ suite('Postgres unit of work + RLS (integration)', () => {
       c.query(`SELECT count(*)::int AS n FROM entity_scope_evaluation WHERE entity_id = 'ere'`),
     )
     expect(count.rows[0].n).toBe(2)
+  })
+
+  it('deletion_request is RLS-scoped, append-only except completion columns', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.deletions.insert({
+        id: 'del_1',
+        tenantId: 't-alpha',
+        scope: 'tenant',
+        status: 'REQUESTED',
+        preview: { regulated_entity: 1 },
+        purged: null,
+        requestedBy: 'tester',
+        requestedAt: AT,
+        completedBy: null,
+        completedAt: null,
+      })
+    })
+
+    expect(await uow('t-alpha', (u) => u.deletions.get('del_1'))).toMatchObject({
+      status: 'REQUESTED',
+    })
+    expect(await uow('t-bravo', (u) => u.deletions.get('del_1'))).toBeNull()
+    const bravoRows = await withTenant(appPool, 't-bravo', (c) =>
+      c.query('SELECT id FROM deletion_request'),
+    )
+    expect(bravoRows.rows).toEqual([])
+
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query('DELETE FROM deletion_request')),
+    ).rejects.toThrow(/permission denied/i)
+    await expect(
+      withTenant(appPool, 't-alpha', (c) =>
+        c.query(`UPDATE deletion_request SET requested_by = 'x'`),
+      ),
+    ).rejects.toThrow(/permission denied/i)
+    // the completion columns are writable
+    await uow('t-alpha', (u) =>
+      u.deletions.setResult('del_1', {
+        status: 'COMPLETED',
+        purged: { regulated_entity: 1 },
+        completedBy: 'tester',
+        completedAt: AT,
+      }),
+    )
+    expect(await uow('t-alpha', (u) => u.deletions.get('del_1'))).toMatchObject({
+      status: 'COMPLETED',
+      completedBy: 'tester',
+    })
+  })
+
+  it('purge_tenant deletes every tenant row (incl. append-only) and keeps the tombstone', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.entities.create(makeEntity('t-alpha', 'pg1'), makeEvaluation('t-alpha', 'pg1'))
+      await u.audit(audit('pg1'))
+      await u.enqueue('entity.readiness_evaluated', { entityId: 'pg1' })
+    })
+    await uow('t-bravo', (u) =>
+      u.entities.create(makeEntity('t-bravo', 'pg2'), makeEvaluation('t-bravo', 'pg2')),
+    )
+
+    // counts() + dump() see only this tenant's rows
+    const { counts, tables } = await uow('t-alpha', async (u) => ({
+      counts: await u.tenantData.counts(),
+      tables: await u.tenantData.dump(),
+    }))
+    expect(counts.regulated_entity).toBe(1)
+    expect(counts.audit_event).toBe(1)
+    expect((tables.regulated_entity as Array<{ tenant_id: string }>)[0]!.tenant_id).toBe('t-alpha')
+
+    // the delete-then-purge flow, in one transaction (mirrors TenantAdminService)
+    const purged = await uow('t-alpha', async (u) => {
+      await u.deletions.insert({
+        id: 'del_pg',
+        tenantId: 't-alpha',
+        scope: 'tenant',
+        status: 'REQUESTED',
+        preview: counts,
+        purged: null,
+        requestedBy: 'tester',
+        requestedAt: AT,
+        completedBy: null,
+        completedAt: null,
+      })
+      const removed = await u.tenantData.purge()
+      await u.deletions.setResult('del_pg', {
+        status: 'COMPLETED',
+        purged: removed,
+        completedBy: 'tester',
+        completedAt: AT,
+      })
+      await u.audit({
+        actorType: 'user',
+        actorId: 'tester',
+        action: 'deletion.completed',
+        targetType: 'tenant',
+        targetId: 't-alpha',
+        occurredAt: AT,
+      })
+      return removed
+    })
+    expect(purged.regulated_entity).toBe(1)
+    expect(purged.audit_event).toBe(1) // the append-only table was purged too
+    expect(purged.outbox).toBe(1)
+
+    // t-alpha business rows are gone; the tombstone + its completion audit remain
+    const alphaAfter = await withTenant(appPool, 't-alpha', async (c) => ({
+      entities: (await c.query(`SELECT count(*)::int AS n FROM regulated_entity`)).rows[0].n,
+      evals: (await c.query(`SELECT count(*)::int AS n FROM entity_scope_evaluation`)).rows[0].n,
+      outbox: (await c.query(`SELECT count(*)::int AS n FROM outbox`)).rows[0].n,
+      audit: (await c.query(`SELECT action FROM audit_event`)).rows,
+      deletion: (await c.query(`SELECT status FROM deletion_request`)).rows,
+    }))
+    expect(alphaAfter).toMatchObject({
+      entities: 0,
+      evals: 0,
+      outbox: 0,
+      audit: [{ action: 'deletion.completed' }],
+      deletion: [{ status: 'COMPLETED' }],
+    })
+
+    // t-bravo is untouched
+    expect(await uow('t-bravo', (u) => u.entities.get('pg2'))).not.toBeNull()
   })
 
   it('isolates evaluations by pack_key within a tenant', async () => {

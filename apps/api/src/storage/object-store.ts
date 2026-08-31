@@ -30,6 +30,8 @@ export interface ObjectStore {
   promote(fromKey: string, toKey: string): Promise<void>
   /** A URL to download a promoted object. Relative (local) or presigned (S3). */
   downloadUrl(key: string): Promise<string>
+  /** Remove every object for a tenant (quarantine + originals). Returns the count. */
+  deleteTenant(tenantId: string): Promise<number>
   /** Local only: accept an upload from the API's own content route. */
   put?(key: string, bytes: Buffer): Promise<void>
 }
@@ -69,6 +71,17 @@ export function createLocalObjectStore(): ObjectStore {
     },
     async downloadUrl(key) {
       return `/api/v1/documents/content/${encodeURIComponent(key)}`
+    },
+    async deleteTenant(tenantId) {
+      const prefixes = [`quarantine/${tenantId}/`, `originals/${tenantId}/`]
+      let removed = 0
+      for (const key of [...blobs.keys()]) {
+        if (prefixes.some((p) => key.startsWith(p))) {
+          blobs.delete(key)
+          removed++
+        }
+      }
+      return removed
     },
     async put(key, bytes) {
       blobs.set(key, bytes)

@@ -10,6 +10,8 @@ import { PgNotificationRepository } from '../repositories/notifications.pg.js'
 import { PgDocumentRepository } from '../repositories/documents.pg.js'
 import { PgExtractionRepository } from '../repositories/extraction.pg.js'
 import { PgOverrideRepository } from '../repositories/overrides.pg.js'
+import { PgTenantDataRepository } from '../repositories/tenant-data.pg.js'
+import { PgDeletionRepository } from '../repositories/deletion.pg.js'
 import type { EntityRepository } from '../services/entities.js'
 import type {
   ClaimEvidenceLinkRecord,
@@ -32,6 +34,13 @@ import type {
   ExtractionRunRecord,
 } from '../services/extraction.js'
 import type { ApplicabilityOverrideRecord, OverrideRepository } from '../services/overrides.js'
+import {
+  TENANT_TABLES,
+  type DeletionRepository,
+  type DeletionRequestRecord,
+  type TableCounts,
+  type TenantDataRepository,
+} from '../services/tenant-admin.js'
 import type {
   AccessGrantRecord,
   DraftRecord,
@@ -98,6 +107,8 @@ export interface Uow {
   readonly documents: DocumentRepository
   readonly extraction: ExtractionRepository
   readonly overrides: OverrideRepository
+  readonly tenantData: TenantDataRepository
+  readonly deletions: DeletionRepository
   audit(event: AuditInput): Promise<void>
   enqueue(topic: string, payload: unknown): Promise<void>
   queryAudit(query: AuditQuery): Promise<AuditRecord[]>
@@ -120,6 +131,8 @@ export function pgUnitOfWork(pool: Pool): UnitOfWork {
         documents: new PgDocumentRepository(client, tenantId),
         extraction: new PgExtractionRepository(client, tenantId),
         overrides: new PgOverrideRepository(client, tenantId),
+        tenantData: new PgTenantDataRepository(client, tenantId),
+        deletions: new PgDeletionRepository(client, tenantId),
         async audit(ev) {
           await client.query(
             `INSERT INTO audit_event
@@ -231,6 +244,7 @@ export interface InMemoryStores {
   extractionRuns: ExtractionRunRecord[]
   extractionProposals: ExtractionProposalRecord[]
   applicabilityOverrides: ApplicabilityOverrideRecord[]
+  deletionRequests: DeletionRequestRecord[]
 }
 
 export function createInMemoryStores(): InMemoryStores {
@@ -254,6 +268,7 @@ export function createInMemoryStores(): InMemoryStores {
     extractionRuns: [],
     extractionProposals: [],
     applicabilityOverrides: [],
+    deletionRequests: [],
     responseItems: [],
     drafts: [],
   }
@@ -735,6 +750,137 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       },
     }
 
+    // --- retention + deletion (engine TRD §21) ---
+    let purgeRequested = false
+
+    const tenantRows = (table: (typeof TENANT_TABLES)[number]): Array<{ tenantId: string }> => {
+      switch (table) {
+        case 'regulated_entity':
+          return [...stores.entities.values(), ...stagedEntities].filter(
+            (e) => e.tenantId === tenantId,
+          )
+        case 'entity_scope_evaluation':
+          return [...stores.evaluations.values(), ...stagedEvaluations].filter(
+            (e) => e.tenantId === tenantId,
+          )
+        case 'claim':
+          return allClaims().filter((c) => c.tenantId === tenantId)
+        case 'review_decision':
+          return [...stores.decisions, ...stagedDecisions].filter((d) => d.tenantId === tenantId)
+        case 'evidence_location':
+          return allEvidenceLocations().filter((e) => e.tenantId === tenantId)
+        case 'claim_evidence_link':
+          return allEvidenceLinks().filter((l) => l.tenantId === tenantId)
+        case 'evidence_request':
+          return allRequests().filter((r) => r.tenantId === tenantId)
+        case 'request_item':
+          return [...stores.requestItems, ...stagedItems].filter((i) => i.tenantId === tenantId)
+        case 'access_token_grant':
+          return allGrants().filter((g) => g.tenantId === tenantId)
+        case 'contributor_submission':
+          return [...stores.submissions, ...stagedSubmissions].filter(
+            (s) => s.tenantId === tenantId,
+          )
+        case 'contributor_response_item':
+          return [...stores.responseItems, ...stagedResponseItems].filter(
+            (ri) => ri.tenantId === tenantId,
+          )
+        case 'request_draft':
+          return stores.drafts.filter((d) => d.tenantId === tenantId)
+        case 'readiness_snapshot':
+          return allSnapshots().filter((s) => s.tenantId === tenantId)
+        case 'notification':
+          return stores.notifications.filter((n) => n.tenantId === tenantId)
+        case 'document':
+          return allDocuments().filter((d) => d.tenantId === tenantId)
+        case 'document_association':
+          return allDocAssociations().filter((a) => a.tenantId === tenantId)
+        case 'extraction_run':
+          return allRuns().filter((r) => r.tenantId === tenantId)
+        case 'extraction_proposal':
+          return allProposals().filter((p) => p.tenantId === tenantId)
+        case 'applicability_override':
+          return allOverrides().filter((o) => o.tenantId === tenantId)
+        case 'outbox':
+          return [...stores.outbox, ...stagedOutbox].filter((o) => o.tenantId === tenantId)
+        case 'audit_event':
+          return [...stores.audit, ...stagedAudit].filter((a) => a.tenantId === tenantId)
+        default:
+          return []
+      }
+    }
+
+    const tenantData: TenantDataRepository = {
+      async counts() {
+        const out: TableCounts = {}
+        for (const table of TENANT_TABLES) {
+          const n = tenantRows(table).length
+          if (n > 0) out[table] = n
+        }
+        return out
+      },
+      async dump() {
+        const out: Record<string, unknown[]> = {}
+        for (const table of TENANT_TABLES) {
+          const rows = tenantRows(table)
+          if (rows.length > 0) out[table] = rows
+        }
+        return out
+      },
+      async purge() {
+        const out: TableCounts = {}
+        for (const table of TENANT_TABLES) {
+          const n = tenantRows(table).length
+          if (n > 0) out[table] = n
+        }
+        purgeRequested = true
+        return out
+      },
+    }
+
+    const stagedDeletions: DeletionRequestRecord[] = []
+    const deletionPatches = new Map<
+      string,
+      {
+        status: DeletionRequestRecord['status']
+        purged?: TableCounts
+        completedBy?: string
+        completedAt?: string
+      }
+    >()
+    const allDeletions = (): DeletionRequestRecord[] =>
+      [...stores.deletionRequests, ...stagedDeletions].map((d) => {
+        const p = deletionPatches.get(d.id)
+        return p
+          ? {
+              ...d,
+              status: p.status,
+              purged: p.purged ?? d.purged,
+              completedBy: p.completedBy ?? d.completedBy,
+              completedAt: p.completedAt ?? d.completedAt,
+            }
+          : d
+      })
+
+    const deletions: DeletionRepository = {
+      async insert(r) {
+        if (r.tenantId !== tenantId) throw new Error('unit-of-work tenant mismatch')
+        stagedDeletions.push({ ...r })
+      },
+      async get(id) {
+        return allDeletions().find((d) => d.id === id && d.tenantId === tenantId) ?? null
+      },
+      async list() {
+        return allDeletions()
+          .filter((d) => d.tenantId === tenantId)
+          .slice()
+          .reverse()
+      },
+      async setResult(id, patch) {
+        deletionPatches.set(id, patch)
+      },
+    }
+
     const uow: Uow = {
       tenantId,
       entities,
@@ -745,6 +891,8 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       documents,
       extraction,
       overrides,
+      tenantData,
+      deletions,
       async audit(ev) {
         stagedAudit.push({
           id: `aud_${randomUUID()}`,
@@ -784,10 +932,6 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
     for (const [entityId, evalId] of entityEvalPointer) {
       const e = stores.entities.get(entityId)
       if (e) e.currentEvaluationId = evalId
-    }
-    for (const a of stagedAudit) {
-      a.seq = String(stores.audit.length + 1)
-      stores.audit.push(a)
     }
     stores.outbox.push(...stagedOutbox)
     for (const c of stagedClaims) stores.claims.push(c)
@@ -855,6 +999,53 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       } else {
         stores.drafts.push(d)
       }
+    }
+
+    for (const r of stagedDeletions) stores.deletionRequests.push(r)
+    for (const [id, patch] of deletionPatches) {
+      const d = stores.deletionRequests.find((x) => x.id === id)
+      if (d) {
+        d.status = patch.status
+        if (patch.purged !== undefined) d.purged = patch.purged
+        if (patch.completedBy !== undefined) d.completedBy = patch.completedBy
+        if (patch.completedAt !== undefined) d.completedAt = patch.completedAt
+      }
+    }
+
+    // A tenant purge drops every tenant-owned row across every table. The
+    // `deletion_request` tombstone is kept, and the `deletion.completed` audit
+    // row (staged after `purge()`) is appended below so it is the only surviving
+    // audit row for the tenant — mirroring the pg `purge_tenant()` ordering.
+    if (purgeRequested) {
+      const others = <T extends { tenantId: string }>(rows: T[]): T[] =>
+        rows.filter((r) => r.tenantId !== tenantId)
+      for (const [id, e] of stores.entities) if (e.tenantId === tenantId) stores.entities.delete(id)
+      for (const [id, e] of stores.evaluations)
+        if (e.tenantId === tenantId) stores.evaluations.delete(id)
+      stores.claims = others(stores.claims)
+      stores.decisions = others(stores.decisions)
+      stores.evidenceLocations = others(stores.evidenceLocations)
+      stores.claimEvidenceLinks = others(stores.claimEvidenceLinks)
+      stores.requests = others(stores.requests)
+      stores.requestItems = others(stores.requestItems)
+      stores.grants = others(stores.grants)
+      stores.submissions = others(stores.submissions)
+      stores.responseItems = others(stores.responseItems)
+      stores.drafts = others(stores.drafts)
+      stores.snapshots = others(stores.snapshots)
+      stores.notifications = others(stores.notifications)
+      stores.documents = others(stores.documents)
+      stores.documentAssociations = others(stores.documentAssociations)
+      stores.extractionRuns = others(stores.extractionRuns)
+      stores.extractionProposals = others(stores.extractionProposals)
+      stores.applicabilityOverrides = others(stores.applicabilityOverrides)
+      stores.outbox = others(stores.outbox)
+      stores.audit = others(stores.audit)
+    }
+
+    for (const a of stagedAudit) {
+      a.seq = String(stores.audit.length + 1)
+      stores.audit.push(a)
     }
     return result
   }

@@ -172,3 +172,18 @@ export const AssociateDocumentRequest = z.object({
   targetId: z.string().min(1),
 })
 export type AssociateDocumentRequest = z.infer<typeof AssociateDocumentRequest>
+
+/**
+ * POST /api/v1/deletion-requests and .../:id/execute (engine TRD §21). The
+ * `confirmation` must be typed to equal the caller's workspace id; execution
+ * repeats the check so a stale preview cannot be actioned by mistake.
+ */
+export const RequestDeletionRequest = z.object({
+  confirmation: z.string().min(1),
+})
+export type RequestDeletionRequest = z.infer<typeof RequestDeletionRequest>
+
+export const ExecuteDeletionRequest = z.object({
+  confirmation: z.string().min(1),
+})
+export type ExecuteDeletionRequest = z.infer<typeof ExecuteDeletionRequest>

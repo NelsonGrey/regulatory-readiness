@@ -40,6 +40,7 @@ export function Shell(): ReactElement {
               Notifications
               {unread ? <span className="rre-badge-count"> {unread}</span> : null}
             </Link>
+            <Link to="/w/settings/deletion">Data &amp; deletion</Link>
           </nav>
         </div>
         <div className="rre-workspace">
