@@ -8,6 +8,8 @@ import {
   type UnitOfWork,
 } from './db/uow.js'
 import { pgResolveGrant } from './repositories/requests.pg.js'
+import { PgAccountsRepository } from './repositories/accounts.pg.js'
+import { InMemoryAccountsRepository, type AccountsRepository } from './services/accounts.js'
 import type { ResolveGrant } from './services/requests.js'
 import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
 import { createS3ObjectStore } from './storage/object-store.s3.js'
@@ -42,6 +44,7 @@ async function main(): Promise<void> {
 
   let unitOfWork: UnitOfWork
   let resolveGrant: ResolveGrant | undefined
+  let accounts: AccountsRepository
 
   const databaseUrl = process.env.DATABASE_URL
   if (databaseUrl) {
@@ -52,11 +55,13 @@ async function main(): Promise<void> {
     const appPool = createPool(process.env.APP_DATABASE_URL ?? databaseUrl)
     unitOfWork = pgUnitOfWork(appPool)
     resolveGrant = (hash) => pgResolveGrant(appPool, hash)
+    accounts = new PgAccountsRepository(appPool)
   } else {
     log.warn('DATABASE_URL not set — using in-memory storage')
     const stores = createInMemoryStores()
     unitOfWork = inMemoryUnitOfWork(stores)
     resolveGrant = async (hash) => stores.grants.find((g) => g.tokenHash === hash) ?? null
+    accounts = new InMemoryAccountsRepository()
   }
 
   const objectStore = buildObjectStore()
@@ -66,7 +71,14 @@ async function main(): Promise<void> {
     ? Number(process.env.DOCUMENT_MAX_BYTES)
     : undefined
 
-  const app = buildApp({ logLevel, unitOfWork, resolveGrant, objectStore, maxDocumentBytes })
+  const app = buildApp({
+    logLevel,
+    unitOfWork,
+    resolveGrant,
+    objectStore,
+    maxDocumentBytes,
+    accounts,
+  })
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.on(signal, () => {

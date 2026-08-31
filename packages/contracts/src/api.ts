@@ -187,3 +187,40 @@ export const ExecuteDeletionRequest = z.object({
   confirmation: z.string().min(1),
 })
 export type ExecuteDeletionRequest = z.infer<typeof ExecuteDeletionRequest>
+
+/** Workspace membership roles (engine TRD §3). */
+export const MemberRole = z.enum(['owner', 'admin', 'member'])
+export type MemberRole = z.infer<typeof MemberRole>
+
+/** POST /api/v1/sign-up — first sign-in creates a person and their first workspace. */
+export const SignUpRequest = z.object({
+  workspaceName: z.string().min(1).max(120),
+  name: z.string().min(1).max(200).optional(),
+})
+export type SignUpRequest = z.infer<typeof SignUpRequest>
+
+/** POST /api/v1/workspaces — an existing person spins up another workspace. */
+export const CreateWorkspaceRequest = z.object({
+  name: z.string().min(1).max(120),
+})
+export type CreateWorkspaceRequest = z.infer<typeof CreateWorkspaceRequest>
+
+/** POST /api/v1/members/invites — an owner/admin invites a teammate (never an owner). */
+export const InviteMemberRequest = z.object({
+  email: z.string().email(),
+  role: z.enum(['admin', 'member']),
+})
+export type InviteMemberRequest = z.infer<typeof InviteMemberRequest>
+
+/** POST /api/v1/invites/accept — the invited person joins with their verified email. */
+export const AcceptInviteRequest = z.object({
+  token: z.string().min(1),
+  name: z.string().min(1).max(200).optional(),
+})
+export type AcceptInviteRequest = z.infer<typeof AcceptInviteRequest>
+
+/** PATCH /api/v1/members/:userId — change a member's role (last owner is protected). */
+export const ChangeRoleRequest = z.object({
+  role: MemberRole,
+})
+export type ChangeRoleRequest = z.infer<typeof ChangeRoleRequest>

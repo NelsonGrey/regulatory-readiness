@@ -14,6 +14,12 @@ pnpm --filter @rre/api dev     # tsx watch, http://localhost:3000
 | Method + path | Purpose |
 | --- | --- |
 | `GET /health` | Liveness |
+| `POST /api/v1/sign-up` | First sign-in — creates the person and their first workspace (they become `owner`); `x-user-email` is the signed-in identity (TRD §3) |
+| `GET /api/v1/workspaces`, `POST /api/v1/workspaces` | The caller's workspaces + role / spin up another |
+| `GET /api/v1/members` | Roster for the `x-tenant-id` workspace (+ pending invites for owner/admin) |
+| `POST /api/v1/members/invites`, `GET …`, `POST /api/v1/members/invites/:id/revoke` | Invite a teammate (owner/admin, never an owner; token returned once) / list / withdraw |
+| `POST /api/v1/invites/accept` | Join a workspace with your own verified email (mismatch / expired / revoked / used all refused) |
+| `PATCH /api/v1/members/:userId`, `DELETE /api/v1/members/:userId` | Change a member's role / remove (or leave) — the last owner is protected |
 | `GET /api/v1/packs`, `GET /api/v1/packs/:packKey` | Installed control packs + validation status (registry-backed, ADR 0005) |
 | `POST /api/v1/entities` | ENT-001 — create a regulated entity; records scope facts, pack + snapshot, per-control applicability, actor, time, and a reproducibility hash (AC-003) |
 | `GET /api/v1/entities/:id/matrix` | MAT-001 — per-control applicability + readiness, approved value, entity status, honest counts (AC-004) |

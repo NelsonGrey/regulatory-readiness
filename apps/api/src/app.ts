@@ -13,6 +13,11 @@ import { DocumentService } from './services/documents.js'
 import { ExtractionService } from './services/extraction.js'
 import { OverrideService } from './services/overrides.js'
 import { TenantAdminService } from './services/tenant-admin.js'
+import {
+  AccountsService,
+  InMemoryAccountsRepository,
+  type AccountsRepository,
+} from './services/accounts.js'
 import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerPackRoutes } from './routes/packs.js'
@@ -26,6 +31,7 @@ import { registerDocumentRoutes } from './routes/documents.js'
 import { registerExtractionRoutes } from './routes/extraction.js'
 import { registerOverrideRoutes } from './routes/overrides.js'
 import { registerTenantAdminRoutes } from './routes/tenant-admin.js'
+import { registerAccountRoutes } from './routes/accounts.js'
 import { registerContributorRoutes } from './routes/contributor.js'
 
 /** Repo `packs/` directory, resolved from this file (works in dev, test, and the bundle). */
@@ -49,6 +55,8 @@ export interface BuildAppOptions {
   objectStore?: ObjectStore
   /** Max accepted upload size in bytes. */
   maxDocumentBytes?: number
+  /** Tenancy control plane (users / workspaces / memberships). Defaults to in-memory. */
+  accounts?: AccountsRepository
 }
 
 /**
@@ -69,6 +77,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   }
   const resolve: ResolveGrant = resolveGrant ?? (async () => null)
   const objectStore = options.objectStore ?? createLocalObjectStore()
+  const accountsRepo = options.accounts ?? new InMemoryAccountsRepository()
 
   const app = Fastify({ logger: false })
 
@@ -107,6 +116,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       })
       await registerTenantAdminRoutes(v1, {
         tenantAdmin: new TenantAdminService(unitOfWork, objectStore),
+      })
+      await registerAccountRoutes(v1, {
+        accounts: new AccountsService(accountsRepo, unitOfWork),
       })
     },
     { prefix: '/api/v1' },
