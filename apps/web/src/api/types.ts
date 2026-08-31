@@ -236,6 +236,43 @@ export interface InitiateUploadResponse {
   objectKey: string
 }
 
+export interface ExtractionRun {
+  id: string
+  documentId: string
+  entityId: string
+  extractorName: string
+  modelId: string
+  status: 'RUNNING' | 'COMPLETED' | 'FAILED'
+  error: string | null
+  proposalCount: number
+  startedBy: string
+  startedAt: string
+  finishedAt: string | null
+}
+
+export interface ValidationFinding {
+  level: 'error' | 'warn'
+  code: string
+  message: string
+}
+
+export interface ExtractionProposal {
+  id: string
+  runId: string
+  documentId: string
+  controlKey: string
+  value: string
+  unit: string | null
+  method: string | null
+  confidence: number | null
+  page: number | null
+  quote: string
+  validation: ValidationFinding[]
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'SUPERSEDED'
+  reason: string | null
+  acceptedClaimId: string | null
+}
+
 export interface NotificationRecord {
   id: string
   eventTopic: string

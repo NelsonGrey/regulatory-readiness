@@ -8,6 +8,7 @@ import { PgRequestRepository } from '../repositories/requests.pg.js'
 import { PgSnapshotRepository } from '../repositories/snapshots.pg.js'
 import { PgNotificationRepository } from '../repositories/notifications.pg.js'
 import { PgDocumentRepository } from '../repositories/documents.pg.js'
+import { PgExtractionRepository } from '../repositories/extraction.pg.js'
 import type { EntityRepository } from '../services/entities.js'
 import type {
   ClaimEvidenceLinkRecord,
@@ -24,6 +25,11 @@ import type {
   DocumentRecord,
   DocumentRepository,
 } from '../services/documents.js'
+import type {
+  ExtractionProposalRecord,
+  ExtractionRepository,
+  ExtractionRunRecord,
+} from '../services/extraction.js'
 import type {
   AccessGrantRecord,
   DraftRecord,
@@ -88,6 +94,7 @@ export interface Uow {
   readonly snapshots: SnapshotRepository
   readonly notifications: NotificationRepository
   readonly documents: DocumentRepository
+  readonly extraction: ExtractionRepository
   audit(event: AuditInput): Promise<void>
   enqueue(topic: string, payload: unknown): Promise<void>
   queryAudit(query: AuditQuery): Promise<AuditRecord[]>
@@ -108,6 +115,7 @@ export function pgUnitOfWork(pool: Pool): UnitOfWork {
         snapshots: new PgSnapshotRepository(client, tenantId),
         notifications: new PgNotificationRepository(client, tenantId),
         documents: new PgDocumentRepository(client, tenantId),
+        extraction: new PgExtractionRepository(client, tenantId),
         async audit(ev) {
           await client.query(
             `INSERT INTO audit_event
@@ -216,6 +224,8 @@ export interface InMemoryStores {
   notifications: NotificationRecord[]
   documents: DocumentRecord[]
   documentAssociations: DocumentAssociationRecord[]
+  extractionRuns: ExtractionRunRecord[]
+  extractionProposals: ExtractionProposalRecord[]
 }
 
 export function createInMemoryStores(): InMemoryStores {
@@ -236,6 +246,8 @@ export function createInMemoryStores(): InMemoryStores {
     notifications: [],
     documents: [],
     documentAssociations: [],
+    extractionRuns: [],
+    extractionProposals: [],
     responseItems: [],
     drafts: [],
   }
@@ -579,6 +591,66 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       },
     }
 
+    const stagedRuns: ExtractionRunRecord[] = []
+    const stagedProposals: ExtractionProposalRecord[] = []
+    const runPatches = new Map<string, Partial<ExtractionRunRecord>>()
+    const proposalPatches = new Map<string, Partial<ExtractionProposalRecord>>()
+    const allRuns = (): ExtractionRunRecord[] =>
+      [...stores.extractionRuns, ...stagedRuns].map((r) => {
+        const p = runPatches.get(r.id)
+        return p ? { ...r, ...p } : r
+      })
+    const allProposals = (): ExtractionProposalRecord[] =>
+      [...stores.extractionProposals, ...stagedProposals].map((r) => {
+        const p = proposalPatches.get(r.id)
+        return p ? { ...r, ...p } : r
+      })
+
+    const extraction: ExtractionRepository = {
+      async insertRun(run) {
+        if (run.tenantId !== tenantId) throw new Error('unit-of-work tenant mismatch')
+        stagedRuns.push({ ...run })
+      },
+      async getRun(id) {
+        return allRuns().find((r) => r.id === id && r.tenantId === tenantId) ?? null
+      },
+      async listRunsByDocument(documentId) {
+        return allRuns()
+          .filter((r) => r.tenantId === tenantId && r.documentId === documentId)
+          .slice()
+          .reverse()
+      },
+      async setRunResult(id, patch) {
+        runPatches.set(id, {
+          ...runPatches.get(id),
+          status: patch.status,
+          error: patch.error ?? null,
+          ...(patch.proposalCount != null ? { proposalCount: patch.proposalCount } : {}),
+          ...(patch.finishedAt != null ? { finishedAt: patch.finishedAt } : {}),
+        })
+      },
+      async insertProposal(p) {
+        if (p.tenantId !== tenantId) throw new Error('unit-of-work tenant mismatch')
+        stagedProposals.push({ ...p })
+      },
+      async getProposal(id) {
+        return allProposals().find((p) => p.id === id && p.tenantId === tenantId) ?? null
+      },
+      async listProposalsByRun(runId) {
+        return allProposals().filter((p) => p.tenantId === tenantId && p.runId === runId)
+      },
+      async setProposalDecision(id, patch) {
+        proposalPatches.set(id, {
+          ...proposalPatches.get(id),
+          status: patch.status,
+          decidedBy: patch.decidedBy,
+          decidedAt: patch.decidedAt,
+          ...(patch.reason != null ? { reason: patch.reason } : {}),
+          ...(patch.acceptedClaimId != null ? { acceptedClaimId: patch.acceptedClaimId } : {}),
+        })
+      },
+    }
+
     const entities: EntityRepository = {
       async create(entity, evaluation) {
         if (entity.tenantId !== tenantId || evaluation.tenantId !== tenantId) {
@@ -606,6 +678,7 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       snapshots,
       notifications,
       documents,
+      extraction,
       async audit(ev) {
         stagedAudit.push({
           id: `aud_${randomUUID()}`,
@@ -664,6 +737,16 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
     for (const s of stagedSubmissions) stores.submissions.push(s)
     for (const ri of stagedResponseItems) stores.responseItems.push(ri)
     for (const s of stagedSnapshots) stores.snapshots.push(s)
+    for (const r of stagedRuns) stores.extractionRuns.push(r)
+    for (const p of stagedProposals) stores.extractionProposals.push(p)
+    for (const [id, patch] of runPatches) {
+      const r = stores.extractionRuns.find((x) => x.id === id)
+      if (r) Object.assign(r, patch)
+    }
+    for (const [id, patch] of proposalPatches) {
+      const p = stores.extractionProposals.find((x) => x.id === id)
+      if (p) Object.assign(p, patch)
+    }
     for (const d of stagedDocuments) stores.documents.push(d)
     for (const a of stagedDocAssociations) stores.documentAssociations.push(a)
     for (const [id, patch] of docPatches) {

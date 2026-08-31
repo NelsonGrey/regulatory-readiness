@@ -10,6 +10,7 @@ import { ContributorService, RequestService, type ResolveGrant } from './service
 import { SnapshotService } from './services/snapshots.js'
 import { NotificationService } from './services/notifications.js'
 import { DocumentService } from './services/documents.js'
+import { ExtractionService } from './services/extraction.js'
 import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerPackRoutes } from './routes/packs.js'
@@ -20,6 +21,7 @@ import { registerRequestRoutes } from './routes/requests.js'
 import { registerSnapshotRoutes } from './routes/snapshots.js'
 import { registerNotificationRoutes } from './routes/notifications.js'
 import { registerDocumentRoutes } from './routes/documents.js'
+import { registerExtractionRoutes } from './routes/extraction.js'
 import { registerContributorRoutes } from './routes/contributor.js'
 
 /** Repo `packs/` directory, resolved from this file (works in dev, test, and the bundle). */
@@ -92,6 +94,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           maxBytes: options.maxDocumentBytes,
         }),
         store: objectStore,
+      })
+      await registerExtractionRoutes(v1, {
+        extraction: new ExtractionService(unitOfWork, registry, objectStore),
       })
     },
     { prefix: '/api/v1' },

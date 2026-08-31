@@ -164,14 +164,22 @@ export function DocumentsPage(): ReactElement {
                 <td>{d.contentHash ? <code>{d.contentHash.slice(0, 19)}…</code> : '—'}</td>
                 <td>
                   {d.status === 'AVAILABLE' ? (
-                    <button
-                      type="button"
-                      className="rre-secondary"
-                      disabled={busy === d.id}
-                      onClick={() => download(d)}
-                    >
-                      Download
-                    </button>
+                    <div className="rre-actions">
+                      <button
+                        type="button"
+                        className="rre-secondary"
+                        disabled={busy === d.id}
+                        onClick={() => download(d)}
+                      >
+                        Download
+                      </button>
+                      <Link
+                        className="rre-secondary"
+                        to={`/w/entities/${id}/documents/${d.id}/extractions`}
+                      >
+                        Extract
+                      </Link>
+                    </div>
                   ) : null}
                 </td>
               </tr>

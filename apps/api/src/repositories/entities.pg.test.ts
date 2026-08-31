@@ -67,7 +67,8 @@ suite('Postgres unit of work + RLS (integration)', () => {
       `TRUNCATE regulated_entity, entity_scope_evaluation, audit_event, outbox, claim,
         review_decision, evidence_request, request_item, access_token_grant,
         contributor_submission, contributor_response_item, request_draft, readiness_snapshot,
-        notification, document, document_association, evidence_location, claim_evidence_link`,
+        notification, document, document_association, evidence_location, claim_evidence_link,
+        extraction_run, extraction_proposal`,
     )
   })
 
@@ -582,6 +583,80 @@ suite('Postgres unit of work + RLS (integration)', () => {
     ).rejects.toThrow(/permission denied/i)
     await expect(
       withTenant(appPool, 't-alpha', (c) => c.query('DELETE FROM evidence_location')),
+    ).rejects.toThrow(/permission denied/i)
+  })
+
+  it('extraction runs + proposals are RLS-scoped; only the outcome columns are mutable', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.extraction.insertRun({
+        id: 'xrun_1',
+        tenantId: 't-alpha',
+        documentId: 'doc_1',
+        entityId: 'ent_1',
+        extractorName: 'keyword',
+        modelId: 'keyword-lines@1',
+        schemaVersion: '1.0',
+        documentHash: 'sha256:beef',
+        status: 'RUNNING',
+        error: null,
+        proposalCount: 0,
+        startedBy: 'tester',
+        startedAt: AT,
+        finishedAt: null,
+      })
+      await u.extraction.insertProposal({
+        id: 'xprp_1',
+        tenantId: 't-alpha',
+        runId: 'xrun_1',
+        documentId: 'doc_1',
+        controlKey: 'C-1',
+        value: 'v',
+        unit: null,
+        method: null,
+        confidence: 0.6,
+        page: null,
+        quote: 'a line',
+        validation: [],
+        status: 'PENDING',
+        decidedBy: null,
+        decidedAt: null,
+        reason: null,
+        acceptedClaimId: null,
+        createdAt: AT,
+      })
+      await u.extraction.setRunResult('xrun_1', {
+        status: 'COMPLETED',
+        proposalCount: 1,
+        finishedAt: AT,
+      })
+      await u.extraction.setProposalDecision('xprp_1', {
+        status: 'REJECTED',
+        decidedBy: 'tester',
+        decidedAt: AT,
+        reason: 'nope',
+      })
+    })
+
+    expect(await uow('t-alpha', (u) => u.extraction.getRun('xrun_1'))).toMatchObject({
+      status: 'COMPLETED',
+      proposalCount: 1,
+    })
+    expect(
+      (await uow('t-alpha', (u) => u.extraction.listProposalsByRun('xrun_1')))[0],
+    ).toMatchObject({
+      status: 'REJECTED',
+      reason: 'nope',
+    })
+    expect(await uow('t-bravo', (u) => u.extraction.getRun('xrun_1'))).toBeNull()
+
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query(`UPDATE extraction_run SET model_id = 'x'`)),
+    ).rejects.toThrow(/permission denied/i)
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query(`UPDATE extraction_proposal SET value = 'x'`)),
+    ).rejects.toThrow(/permission denied/i)
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query('DELETE FROM extraction_proposal')),
     ).rejects.toThrow(/permission denied/i)
   })
 

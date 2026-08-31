@@ -59,6 +59,12 @@ export const LinkEvidenceRequest = z.object({
 })
 export type LinkEvidenceRequest = z.infer<typeof LinkEvidenceRequest>
 
+/** POST /api/v1/extraction-proposals/:id/reject */
+export const RejectProposalRequest = z.object({
+  reason: z.string().min(1).max(2000),
+})
+export type RejectProposalRequest = z.infer<typeof RejectProposalRequest>
+
 /** POST /api/v1/entities/:id/requests */
 export const CreateRequestRequest = z.object({
   controlKeys: z.array(z.string().min(1)).min(1),

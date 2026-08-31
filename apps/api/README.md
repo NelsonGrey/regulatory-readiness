@@ -37,6 +37,10 @@ pnpm --filter @rre/api dev     # tsx watch, http://localhost:3000
 | `GET /api/v1/documents/:id/download` | A download URL — only when `AVAILABLE` |
 | `POST /api/v1/documents/:id/associations` | Link a document to an entity / request / claim |
 | `POST /api/v1/claims/:claimId/evidence`, `GET /api/v1/claims/:claimId/evidence` | Pin a spot in an `AVAILABLE` document to a claim — a `SUPPORTS` link is what turns `SELF_ATTESTED` into `EVIDENCED` |
+| `POST /api/v1/entities/:id/documents/:documentId/extractions`, `GET …` | Run AI/OCR extraction over a linked `AVAILABLE` document / list runs |
+| `GET /api/v1/extractions/:runId` | The run + its proposals (value, unit, confidence, source quote, validation) |
+| `POST /api/v1/extraction-proposals/:id/accept` | The human gate — creates an `EXTRACTION_ACCEPTED` claim + the evidence link; blocked with no location or a failing validator |
+| `POST /api/v1/extraction-proposals/:id/reject` | Reject a proposal (a reason is required) |
 | `GET /contributor/v1/requests/:token` | SUP-001 — the requested controls + entity name only (plus any saved draft); no tenant header |
 | `PUT /contributor/v1/requests/:token/draft` | SUP-002 — save in-progress answers (mutable, one draft per request; cleared on submit) |
 | `POST /contributor/v1/requests/:token/submit` | SUP-003 — no-account submission (availability state per item); writes an immutable version, returns a receipt |
