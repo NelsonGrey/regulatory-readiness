@@ -190,6 +190,36 @@ export interface ContributorReceipt {
   note: string
 }
 
+export type DocumentStatus =
+  | 'UPLOADING'
+  | 'SCANNING'
+  | 'AVAILABLE'
+  | 'REJECTED_MALWARE'
+  | 'UNSUPPORTED'
+  | 'DELETED_PENDING_PURGE'
+  | 'PURGED'
+
+export interface DocumentRecord {
+  id: string
+  filename: string
+  mediaType: string
+  sizeBytes: number
+  contentHash: string | null
+  accessClass: string
+  status: DocumentStatus
+  scanNote: string | null
+  ingestedBy: string
+  createdAt: string
+  availableAt: string | null
+}
+
+export interface InitiateUploadResponse {
+  documentId: string
+  uploadUrl: string
+  uploadMethod: 'PUT'
+  objectKey: string
+}
+
 export interface NotificationRecord {
   id: string
   eventTopic: string

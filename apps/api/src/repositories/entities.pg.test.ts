@@ -67,7 +67,7 @@ suite('Postgres unit of work + RLS (integration)', () => {
       `TRUNCATE regulated_entity, entity_scope_evaluation, audit_event, outbox, claim,
         review_decision, evidence_request, request_item, access_token_grant,
         contributor_submission, contributor_response_item, request_draft, readiness_snapshot,
-        notification`,
+        notification, document, document_association`,
     )
   })
 
@@ -434,6 +434,64 @@ suite('Postgres unit of work + RLS (integration)', () => {
     ).rejects.toThrow(/permission denied/i)
     await withTenant(appPool, 't-alpha', (c) =>
       c.query('UPDATE notification SET read_at = now() WHERE id = $1', ['ntf_a2']),
+    )
+  })
+
+  it('document + association are RLS-scoped; only lifecycle columns are mutable', async () => {
+    await uow('t-alpha', async (u) => {
+      await u.documents.insert({
+        id: 'doc_1',
+        tenantId: 't-alpha',
+        filename: 'a.pdf',
+        mediaType: 'application/pdf',
+        sizeBytes: 10,
+        uploadKey: 'quarantine/t-alpha/doc_1',
+        objectKey: null,
+        contentHash: null,
+        accessClass: 'INTERNAL_CONFIDENTIAL',
+        status: 'UPLOADING',
+        scanNote: null,
+        ingestedBy: 'tester',
+        createdAt: AT,
+        availableAt: null,
+      })
+      await u.documents.insertAssociation({
+        id: 'dass_1',
+        tenantId: 't-alpha',
+        documentId: 'doc_1',
+        targetType: 'regulated_entity',
+        targetId: 'ent_1',
+        addedBy: 'tester',
+        createdAt: AT,
+      })
+      await u.documents.setScanResult('doc_1', {
+        status: 'AVAILABLE',
+        objectKey: 'originals/t-alpha/doc_1',
+        contentHash: 'sha256:beef',
+        availableAt: AT,
+      })
+    })
+
+    const got = await uow('t-alpha', (u) => u.documents.get('doc_1'))
+    expect(got).toMatchObject({ status: 'AVAILABLE', objectKey: 'originals/t-alpha/doc_1' })
+    expect(
+      await uow('t-alpha', (u) => u.documents.listByTarget('regulated_entity', 'ent_1')),
+    ).toHaveLength(1)
+
+    expect(await uow('t-bravo', (u) => u.documents.get('doc_1'))).toBeNull()
+    const bravoRows = await withTenant(appPool, 't-bravo', (c) =>
+      c.query('SELECT id FROM document'),
+    )
+    expect(bravoRows.rows).toEqual([])
+
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query(`UPDATE document SET filename = 'x'`)),
+    ).rejects.toThrow(/permission denied/i)
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query('DELETE FROM document_association')),
+    ).rejects.toThrow(/permission denied/i)
+    await withTenant(appPool, 't-alpha', (c) =>
+      c.query(`UPDATE document SET status = 'DELETED_PENDING_PURGE' WHERE id = 'doc_1'`),
     )
   })
 

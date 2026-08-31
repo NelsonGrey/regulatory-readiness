@@ -7,10 +7,16 @@ import { PgClaimRepository } from '../repositories/claims.pg.js'
 import { PgRequestRepository } from '../repositories/requests.pg.js'
 import { PgSnapshotRepository } from '../repositories/snapshots.pg.js'
 import { PgNotificationRepository } from '../repositories/notifications.pg.js'
+import { PgDocumentRepository } from '../repositories/documents.pg.js'
 import type { EntityRepository } from '../services/entities.js'
 import type { ClaimRecord, ClaimRepository, ReviewDecisionRecord } from '../services/claims.js'
 import type { SnapshotRecord, SnapshotRepository } from '../services/snapshots.js'
 import type { NotificationRecord, NotificationRepository } from '../services/notifications.js'
+import type {
+  DocumentAssociationRecord,
+  DocumentRecord,
+  DocumentRepository,
+} from '../services/documents.js'
 import type {
   AccessGrantRecord,
   DraftRecord,
@@ -74,6 +80,7 @@ export interface Uow {
   readonly requests: RequestRepository
   readonly snapshots: SnapshotRepository
   readonly notifications: NotificationRepository
+  readonly documents: DocumentRepository
   audit(event: AuditInput): Promise<void>
   enqueue(topic: string, payload: unknown): Promise<void>
   queryAudit(query: AuditQuery): Promise<AuditRecord[]>
@@ -93,6 +100,7 @@ export function pgUnitOfWork(pool: Pool): UnitOfWork {
         requests: new PgRequestRepository(client, tenantId),
         snapshots: new PgSnapshotRepository(client, tenantId),
         notifications: new PgNotificationRepository(client, tenantId),
+        documents: new PgDocumentRepository(client, tenantId),
         async audit(ev) {
           await client.query(
             `INSERT INTO audit_event
@@ -197,6 +205,8 @@ export interface InMemoryStores {
   drafts: DraftRecord[]
   snapshots: SnapshotRecord[]
   notifications: NotificationRecord[]
+  documents: DocumentRecord[]
+  documentAssociations: DocumentAssociationRecord[]
 }
 
 export function createInMemoryStores(): InMemoryStores {
@@ -213,6 +223,8 @@ export function createInMemoryStores(): InMemoryStores {
     submissions: [],
     snapshots: [],
     notifications: [],
+    documents: [],
+    documentAssociations: [],
     responseItems: [],
     drafts: [],
   }
@@ -431,6 +443,75 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       },
     }
 
+    const stagedDocuments: DocumentRecord[] = []
+    const stagedDocAssociations: DocumentAssociationRecord[] = []
+    const docPatches = new Map<string, Partial<DocumentRecord>>()
+    const allDocuments = (): DocumentRecord[] =>
+      [...stores.documents, ...stagedDocuments].map((d) => {
+        const p = docPatches.get(d.id)
+        return p ? { ...d, ...p } : d
+      })
+    const allDocAssociations = (): DocumentAssociationRecord[] => [
+      ...stores.documentAssociations,
+      ...stagedDocAssociations,
+    ]
+
+    const documents: DocumentRepository = {
+      async insert(d) {
+        if (d.tenantId !== tenantId) throw new Error('unit-of-work tenant mismatch')
+        stagedDocuments.push({ ...d })
+      },
+      async get(id) {
+        return allDocuments().find((d) => d.id === id && d.tenantId === tenantId) ?? null
+      },
+      async list() {
+        return allDocuments()
+          .filter((d) => d.tenantId === tenantId)
+          .slice()
+          .reverse()
+      },
+      async setScanResult(id, patch) {
+        const prev = docPatches.get(id) ?? {}
+        docPatches.set(id, {
+          ...prev,
+          status: patch.status,
+          ...(patch.objectKey != null ? { objectKey: patch.objectKey } : {}),
+          ...(patch.contentHash != null ? { contentHash: patch.contentHash } : {}),
+          scanNote: patch.scanNote ?? null,
+          ...(patch.availableAt != null ? { availableAt: patch.availableAt } : {}),
+        })
+      },
+      async insertAssociation(a) {
+        if (a.tenantId !== tenantId) throw new Error('unit-of-work tenant mismatch')
+        const exists = allDocAssociations().some(
+          (x) =>
+            x.documentId === a.documentId &&
+            x.targetType === a.targetType &&
+            x.targetId === a.targetId,
+        )
+        if (!exists) stagedDocAssociations.push({ ...a })
+      },
+      async listAssociations(documentId) {
+        return allDocAssociations().filter(
+          (a) => a.tenantId === tenantId && a.documentId === documentId,
+        )
+      },
+      async listByTarget(targetType, targetId) {
+        const ids = new Set(
+          allDocAssociations()
+            .filter(
+              (a) =>
+                a.tenantId === tenantId && a.targetType === targetType && a.targetId === targetId,
+            )
+            .map((a) => a.documentId),
+        )
+        return allDocuments()
+          .filter((d) => d.tenantId === tenantId && ids.has(d.id))
+          .slice()
+          .reverse()
+      },
+    }
+
     const entities: EntityRepository = {
       async create(entity, evaluation) {
         if (entity.tenantId !== tenantId || evaluation.tenantId !== tenantId) {
@@ -457,6 +538,7 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       requests,
       snapshots,
       notifications,
+      documents,
       async audit(ev) {
         stagedAudit.push({
           id: `aud_${randomUUID()}`,
@@ -513,6 +595,12 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
     for (const s of stagedSubmissions) stores.submissions.push(s)
     for (const ri of stagedResponseItems) stores.responseItems.push(ri)
     for (const s of stagedSnapshots) stores.snapshots.push(s)
+    for (const d of stagedDocuments) stores.documents.push(d)
+    for (const a of stagedDocAssociations) stores.documentAssociations.push(a)
+    for (const [id, patch] of docPatches) {
+      const d = stores.documents.find((x) => x.id === id)
+      if (d) Object.assign(d, patch)
+    }
     for (const n of stores.notifications) {
       if (n.tenantId !== tenantId) continue
       const at = notificationReadOverrides.get(n.id) ?? (n.readAt === null ? markAllReadAt : null)

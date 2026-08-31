@@ -108,3 +108,27 @@ export const ContributorDraftRequest = z.object({
   ),
 })
 export type ContributorDraftRequest = z.infer<typeof ContributorDraftRequest>
+
+/** The access classes an operator may set on an uploaded document (subset of the pack `AccessClass`). */
+export const DocumentAccessClass = z.enum([
+  'PUBLIC_CANDIDATE',
+  'INTERNAL_CONFIDENTIAL',
+  'PARTY_CONFIDENTIAL',
+])
+
+/** POST /documents — start an upload; the client then PUTs the bytes and finalizes. */
+export const InitiateUploadRequest = z.object({
+  filename: z.string().min(1).max(512),
+  mediaType: z.string().min(1).max(255),
+  sizeBytes: z.number().int().positive(),
+  accessClass: DocumentAccessClass.optional(),
+  entityId: z.string().min(1).optional(),
+})
+export type InitiateUploadRequest = z.infer<typeof InitiateUploadRequest>
+
+/** POST /documents/:id/associations */
+export const AssociateDocumentRequest = z.object({
+  targetType: z.enum(['regulated_entity', 'evidence_request', 'claim']),
+  targetId: z.string().min(1),
+})
+export type AssociateDocumentRequest = z.infer<typeof AssociateDocumentRequest>

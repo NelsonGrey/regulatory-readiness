@@ -9,6 +9,8 @@ import {
 } from './db/uow.js'
 import { pgResolveGrant } from './repositories/requests.pg.js'
 import type { ResolveGrant } from './services/requests.js'
+import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
+import { createS3ObjectStore } from './storage/object-store.s3.js'
 
 function parseLogLevel(value: string | undefined): LogLevel {
   return value === 'debug' || value === 'info' || value === 'warn' || value === 'error'
@@ -18,6 +20,22 @@ function parseLogLevel(value: string | undefined): LogLevel {
 
 const logLevel = parseLogLevel(process.env.API_LOG_LEVEL)
 const log = createLogger({ level: logLevel, base: { component: 'api' } })
+
+function buildObjectStore(): ObjectStore {
+  const originals = process.env.S3_BUCKET_ORIGINALS
+  const quarantine = process.env.S3_BUCKET_QUARANTINE
+  if (!originals || !quarantine) return createLocalObjectStore()
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID
+  return createS3ObjectStore({
+    region: process.env.AWS_REGION ?? 'eu-west-1',
+    endpoint: process.env.AWS_ENDPOINT_URL,
+    originalsBucket: originals,
+    quarantineBucket: quarantine,
+    credentials: accessKeyId
+      ? { accessKeyId, secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? '' }
+      : undefined,
+  })
+}
 
 async function main(): Promise<void> {
   const port = Number(process.env.API_PORT ?? 3000)
@@ -41,7 +59,14 @@ async function main(): Promise<void> {
     resolveGrant = async (hash) => stores.grants.find((g) => g.tokenHash === hash) ?? null
   }
 
-  const app = buildApp({ logLevel, unitOfWork, resolveGrant })
+  const objectStore = buildObjectStore()
+  log.info('object store', { kind: objectStore.kind })
+
+  const maxDocumentBytes = process.env.DOCUMENT_MAX_BYTES
+    ? Number(process.env.DOCUMENT_MAX_BYTES)
+    : undefined
+
+  const app = buildApp({ logLevel, unitOfWork, resolveGrant, objectStore, maxDocumentBytes })
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.on(signal, () => {

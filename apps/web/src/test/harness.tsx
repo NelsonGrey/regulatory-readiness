@@ -27,7 +27,19 @@ export function mockApi(stubs: RouteStub[]): {
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       const method = (init?.method ?? 'GET').toUpperCase()
-      const body = init?.body ? JSON.parse(String(init.body)) : undefined
+      let body: unknown
+      if (init?.body !== undefined && init.body !== null) {
+        const raw = init.body
+        if (typeof raw === 'string') {
+          try {
+            body = JSON.parse(raw)
+          } catch {
+            body = raw
+          }
+        } else {
+          body = '[binary]'
+        }
+      }
       calls.push({ method, url, body })
 
       const stub = ordered.find(
@@ -37,10 +49,17 @@ export function mockApi(stubs: RouteStub[]): {
       const payload = stub
         ? stub.body
         : { error: { code: 'NO_STUB', message: `no stub for ${method} ${url}` } }
+      const isString = typeof payload === 'string'
+      const nullBody = status === 204 || status === 205 || status === 304 || payload == null
+      const responseBody = nullBody
+        ? null
+        : isString
+          ? (payload as string)
+          : JSON.stringify(payload)
 
-      return new Response(JSON.stringify(payload), {
+      return new Response(responseBody, {
         status,
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': isString ? 'text/plain' : 'application/json' },
       })
     }),
   )

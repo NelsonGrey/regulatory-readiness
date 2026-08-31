@@ -9,6 +9,8 @@ import { ClaimService } from './services/claims.js'
 import { ContributorService, RequestService, type ResolveGrant } from './services/requests.js'
 import { SnapshotService } from './services/snapshots.js'
 import { NotificationService } from './services/notifications.js'
+import { DocumentService } from './services/documents.js'
+import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerPackRoutes } from './routes/packs.js'
 import { registerEntityRoutes } from './routes/entities.js'
@@ -17,6 +19,7 @@ import { registerClaimRoutes } from './routes/claims.js'
 import { registerRequestRoutes } from './routes/requests.js'
 import { registerSnapshotRoutes } from './routes/snapshots.js'
 import { registerNotificationRoutes } from './routes/notifications.js'
+import { registerDocumentRoutes } from './routes/documents.js'
 import { registerContributorRoutes } from './routes/contributor.js'
 
 /** Repo `packs/` directory, resolved from this file (works in dev, test, and the bundle). */
@@ -36,6 +39,10 @@ export interface BuildAppOptions {
    * from the same store.
    */
   resolveGrant?: ResolveGrant
+  /** Object storage for document intake. Defaults to an in-memory local store. */
+  objectStore?: ObjectStore
+  /** Max accepted upload size in bytes. */
+  maxDocumentBytes?: number
 }
 
 /**
@@ -55,8 +62,14 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     resolveGrant = async (hash) => stores.grants.find((g) => g.tokenHash === hash) ?? null
   }
   const resolve: ResolveGrant = resolveGrant ?? (async () => null)
+  const objectStore = options.objectStore ?? createLocalObjectStore()
 
   const app = Fastify({ logger: false })
+
+  // Raw-byte uploads for the local object store's content route.
+  app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (_req, body, done) =>
+    done(null, body),
+  )
 
   app.addHook('onRequest', async (req) => {
     log.debug('request', { method: req.method, url: req.url, correlationId: req.id })
@@ -74,6 +87,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       await registerRequestRoutes(v1, { requests: new RequestService(unitOfWork, registry) })
       await registerSnapshotRoutes(v1, { snapshots: new SnapshotService(unitOfWork, registry) })
       await registerNotificationRoutes(v1, { notifications: new NotificationService(unitOfWork) })
+      await registerDocumentRoutes(v1, {
+        documents: new DocumentService(unitOfWork, objectStore, {
+          maxBytes: options.maxDocumentBytes,
+        }),
+        store: objectStore,
+      })
     },
     { prefix: '/api/v1' },
   )

@@ -106,6 +106,12 @@ export function MatrixPage(): ReactElement {
             <Link to={`/w/entities/${id}/snapshots`}>Snapshots &amp; export →</Link>
           </dd>
         </div>
+        <div>
+          <dt>Documents</dt>
+          <dd>
+            <Link to={`/w/entities/${id}/documents`}>Documents →</Link>
+          </dd>
+        </div>
       </dl>
 
       <p className="rre-denominator">

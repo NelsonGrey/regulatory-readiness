@@ -8,6 +8,7 @@ import { RequestsPage } from './routes/RequestsPage.js'
 import { RequestDetailPage } from './routes/RequestDetailPage.js'
 import { SnapshotsPage } from './routes/SnapshotsPage.js'
 import { NotificationsPage } from './routes/NotificationsPage.js'
+import { DocumentsPage } from './routes/DocumentsPage.js'
 import { ContributorPortalPage } from './routes/ContributorPortalPage.js'
 
 export const routes: RouteObject[] = [
@@ -22,6 +23,7 @@ export const routes: RouteObject[] = [
       { path: 'w/entities/:id/requests', element: <RequestsPage /> },
       { path: 'w/entities/:id/requests/:requestId', element: <RequestDetailPage /> },
       { path: 'w/entities/:id/snapshots', element: <SnapshotsPage /> },
+      { path: 'w/entities/:id/documents', element: <DocumentsPage /> },
       { path: 'w/notifications', element: <NotificationsPage /> },
     ],
   },

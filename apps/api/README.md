@@ -31,6 +31,11 @@ pnpm --filter @rre/api dev     # tsx watch, http://localhost:3000
 | `GET /api/v1/readiness-snapshots/:id/export.json`, `.../export.csv` | Canonical JSON / control-matrix CSV, generated only from the frozen snapshot, served as an attachment |
 | `GET /api/v1/notifications` (`?unread=1`, `?limit=`), `GET /api/v1/notifications/unread-count` | The tenant's notification feed (written by the worker's events consumer) |
 | `POST /api/v1/notifications/:id/read`, `POST /api/v1/notifications/read-all` | Mark read — the only mutation on a notification |
+| `POST /api/v1/documents` | Start an upload — media-type + size check, returns a presigned/relative PUT URL |
+| `POST /api/v1/documents/:id/finalize` | Hash + scan the uploaded bytes, promote a clean object to originals, set `AVAILABLE` / `REJECTED_MALWARE` / `UNSUPPORTED` |
+| `GET /api/v1/documents` (`?entityId=`), `GET /api/v1/documents/:id` | Document list / detail (with associations) |
+| `GET /api/v1/documents/:id/download` | A download URL — only when `AVAILABLE` |
+| `POST /api/v1/documents/:id/associations` | Link a document to an entity / request / claim |
 | `GET /contributor/v1/requests/:token` | SUP-001 — the requested controls + entity name only (plus any saved draft); no tenant header |
 | `PUT /contributor/v1/requests/:token/draft` | SUP-002 — save in-progress answers (mutable, one draft per request; cleared on submit) |
 | `POST /contributor/v1/requests/:token/submit` | SUP-003 — no-account submission (availability state per item); writes an immutable version, returns a receipt |
@@ -54,6 +59,11 @@ an OIDC session and a Postgres `SET LOCAL app.tenant_id` per transaction
   `app.tenant_id` set (`withTenant` in `src/db/pool.ts`).
 - With no `DATABASE_URL`, the API falls back to the in-memory unit of work; the
   contributor token grant is resolved from the same in-memory store.
+- Document intake uses S3 (`createS3ObjectStore`) only when `S3_BUCKET_ORIGINALS`
+  and `S3_BUCKET_QUARANTINE` are both set; otherwise an in-memory `local` store
+  keeps the bytes and the API serves them from `/api/v1/documents/content/*`.
+  Either way, the upload is hashed and scanned at finalize before it is promoted
+  out of quarantine.
 - `src/repositories/entities.pg.test.ts` is an integration test (RLS scoping for
   entities, claims, requests, and submissions; append-only enforcement; grant
   resolution by hash): it runs when `TEST_DATABASE_URL` is set and skips
