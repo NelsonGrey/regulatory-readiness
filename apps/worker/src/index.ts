@@ -1,9 +1,17 @@
 import { createLogger, type LogLevel } from '@rre/observability'
 import { handlers } from './handlers.js'
 import { createPool } from './db.js'
-import { createSqsPublisher } from './sqs.js'
+import { createSqsConsumer, createSqsPublisher } from './sqs.js'
 import { relayOnce } from './outbox-relay.js'
 import { sweepExpiredRequests } from './expiry-sweep.js'
+import { consumeEventsOnce } from './events-consumer.js'
+import {
+  handleEvent,
+  consoleNotifier,
+  slackWebhookNotifier,
+  type Notifier,
+} from './notifications.js'
+import { pgNotificationWriter } from './notification-writer.pg.js'
 
 function parseLogLevel(value: string | undefined): LogLevel {
   return value === 'debug' || value === 'info' || value === 'warn' || value === 'error'
@@ -19,6 +27,7 @@ const log = createLogger({
 let running = true
 let relayTimer: ReturnType<typeof setInterval> | undefined
 let expiryTimer: ReturnType<typeof setInterval> | undefined
+let eventsTimer: ReturnType<typeof setInterval> | undefined
 
 function startOutboxRelay(): void {
   const relayUrl = process.env.RELAY_DATABASE_URL
@@ -72,10 +81,49 @@ function startExpirySweep(): void {
   log.info('request expiry sweep started', { intervalMs })
 }
 
+function startEventConsumer(): void {
+  const queueUrl = process.env.SQS_EVENTS_QUEUE_URL
+  const appUrl = process.env.APP_DATABASE_URL ?? process.env.DATABASE_URL
+  if (!queueUrl || !appUrl) {
+    log.warn('events consumer disabled — set SQS_EVENTS_QUEUE_URL and APP_DATABASE_URL')
+    return
+  }
+
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID
+  const consumer = createSqsConsumer({
+    region: process.env.AWS_REGION ?? 'eu-west-1',
+    endpoint: process.env.AWS_ENDPOINT_URL,
+    queueUrl,
+    credentials: accessKeyId
+      ? { accessKeyId, secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? '' }
+      : undefined,
+  })
+  const notifications = pgNotificationWriter(createPool(appUrl))
+  const slackUrl = process.env.SLACK_WEBHOOK_URL
+  const notifier: Notifier = slackUrl ? slackWebhookNotifier(slackUrl) : consoleNotifier(log)
+
+  const intervalMs = Number(process.env.EVENT_CONSUMER_INTERVAL_MS ?? 3000)
+  const tick = async (): Promise<void> => {
+    try {
+      const r = await consumeEventsOnce({
+        consumer,
+        handle: (event) => handleEvent(event, { notifications, notifier, log }),
+        log,
+      })
+      if (r.handled > 0 || r.failed > 0) log.info('events consumer', { ...r })
+    } catch (err) {
+      log.error('events consumer tick failed', { err: String(err) })
+    }
+  }
+  eventsTimer = setInterval(() => void tick(), intervalMs)
+  log.info('events consumer started', { intervalMs, channel: slackUrl ? 'slack' : 'console' })
+}
+
 async function main(): Promise<void> {
   log.info('worker started', { handlers: Object.keys(handlers) })
   startOutboxRelay()
   startExpirySweep()
+  startEventConsumer()
 
   while (running) {
     await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -83,6 +131,7 @@ async function main(): Promise<void> {
 
   if (relayTimer) clearInterval(relayTimer)
   if (expiryTimer) clearInterval(expiryTimer)
+  if (eventsTimer) clearInterval(eventsTimer)
   log.info('worker stopped')
 }
 

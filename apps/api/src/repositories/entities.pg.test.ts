@@ -66,7 +66,8 @@ suite('Postgres unit of work + RLS (integration)', () => {
     await adminPool.query(
       `TRUNCATE regulated_entity, entity_scope_evaluation, audit_event, outbox, claim,
         review_decision, evidence_request, request_item, access_token_grant,
-        contributor_submission, contributor_response_item, request_draft, readiness_snapshot`,
+        contributor_submission, contributor_response_item, request_draft, readiness_snapshot,
+        notification`,
     )
   })
 
@@ -393,6 +394,47 @@ suite('Postgres unit of work + RLS (integration)', () => {
     await expect(
       withTenant(appPool, 't-alpha', (c) => c.query('DELETE FROM readiness_snapshot')),
     ).rejects.toThrow(/permission denied/i)
+  })
+
+  it('notification is RLS-scoped; only read_at is updatable by the app role', async () => {
+    const insert = (id: string, tenant: string) =>
+      withTenant(appPool, tenant, (c) =>
+        c.query(
+          `INSERT INTO notification (id, tenant_id, event_topic, title, body, created_at)
+           VALUES ($1, $2, 'request.submitted', 'A supplier submitted', 'body', $3)`,
+          [id, tenant, AT],
+        ),
+      )
+    await insert('ntf_a', 't-alpha')
+    await insert('ntf_a2', 't-alpha')
+    await insert('ntf_b', 't-bravo')
+
+    const alpha = await uow('t-alpha', (u) =>
+      u.notifications.list({ unreadOnly: false, limit: 10 }),
+    )
+    expect(alpha.map((n) => n.id).sort()).toEqual(['ntf_a', 'ntf_a2'])
+    expect(await uow('t-alpha', (u) => u.notifications.countUnread())).toBe(2)
+
+    expect(await uow('t-alpha', (u) => u.notifications.markRead('ntf_a', AT))).toBe(true)
+    expect(await uow('t-alpha', (u) => u.notifications.markRead('ntf_b', AT))).toBe(false) // other tenant
+    expect(await uow('t-alpha', (u) => u.notifications.countUnread())).toBe(1)
+
+    // another tenant sees nothing
+    const bravoRows = await withTenant(appPool, 't-bravo', (c) =>
+      c.query('SELECT id FROM notification WHERE tenant_id = $1', ['t-alpha']),
+    )
+    expect(bravoRows.rows).toEqual([])
+
+    // title/body are immutable to rre_app; read_at is not
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query(`UPDATE notification SET title = 'x'`)),
+    ).rejects.toThrow(/permission denied/i)
+    await expect(
+      withTenant(appPool, 't-alpha', (c) => c.query('DELETE FROM notification')),
+    ).rejects.toThrow(/permission denied/i)
+    await withTenant(appPool, 't-alpha', (c) =>
+      c.query('UPDATE notification SET read_at = now() WHERE id = $1', ['ntf_a2']),
+    )
   })
 
   it('isolates evaluations by pack_key within a tenant', async () => {

@@ -1,15 +1,30 @@
-import { useState, type ReactElement } from 'react'
-import { Link, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useState, type ReactElement } from 'react'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { api } from '../api/client.js'
 import { getTenant, setTenant } from '../workspace.js'
 
 export function Shell(): ReactElement {
   const navigate = useNavigate()
+  const location = useLocation()
   const [tenant, setTenantState] = useState(getTenant())
+  const [unread, setUnread] = useState<number | null>(null)
 
   const applyTenant = (): void => {
     setTenant(tenant)
     navigate(0) // re-run loaders with the new workspace
   }
+
+  // Refresh the unread badge on navigation (cheap, and covers "mark read" round-trips).
+  useEffect(() => {
+    let live = true
+    api
+      .get<{ count: number }>('/notifications/unread-count')
+      .then((r) => live && setUnread(r.count))
+      .catch(() => live && setUnread(null))
+    return () => {
+      live = false
+    }
+  }, [location.key])
 
   return (
     <div className="rre-app">
@@ -21,6 +36,10 @@ export function Shell(): ReactElement {
           <nav className="rre-nav">
             <Link to="/">Packs</Link>
             <Link to="/w/entities/new">New entity</Link>
+            <Link to="/w/notifications">
+              Notifications
+              {unread ? <span className="rre-badge-count"> {unread}</span> : null}
+            </Link>
           </nav>
         </div>
         <div className="rre-workspace">

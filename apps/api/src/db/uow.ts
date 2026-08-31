@@ -6,9 +6,11 @@ import { PgEntityRepository } from '../repositories/entities.pg.js'
 import { PgClaimRepository } from '../repositories/claims.pg.js'
 import { PgRequestRepository } from '../repositories/requests.pg.js'
 import { PgSnapshotRepository } from '../repositories/snapshots.pg.js'
+import { PgNotificationRepository } from '../repositories/notifications.pg.js'
 import type { EntityRepository } from '../services/entities.js'
 import type { ClaimRecord, ClaimRepository, ReviewDecisionRecord } from '../services/claims.js'
 import type { SnapshotRecord, SnapshotRepository } from '../services/snapshots.js'
+import type { NotificationRecord, NotificationRepository } from '../services/notifications.js'
 import type {
   AccessGrantRecord,
   DraftRecord,
@@ -71,6 +73,7 @@ export interface Uow {
   readonly claims: ClaimRepository
   readonly requests: RequestRepository
   readonly snapshots: SnapshotRepository
+  readonly notifications: NotificationRepository
   audit(event: AuditInput): Promise<void>
   enqueue(topic: string, payload: unknown): Promise<void>
   queryAudit(query: AuditQuery): Promise<AuditRecord[]>
@@ -89,6 +92,7 @@ export function pgUnitOfWork(pool: Pool): UnitOfWork {
         claims: new PgClaimRepository(client, tenantId),
         requests: new PgRequestRepository(client, tenantId),
         snapshots: new PgSnapshotRepository(client, tenantId),
+        notifications: new PgNotificationRepository(client, tenantId),
         async audit(ev) {
           await client.query(
             `INSERT INTO audit_event
@@ -192,6 +196,7 @@ export interface InMemoryStores {
   responseItems: ResponseItemRecord[]
   drafts: DraftRecord[]
   snapshots: SnapshotRecord[]
+  notifications: NotificationRecord[]
 }
 
 export function createInMemoryStores(): InMemoryStores {
@@ -207,6 +212,7 @@ export function createInMemoryStores(): InMemoryStores {
     grants: [],
     submissions: [],
     snapshots: [],
+    notifications: [],
     responseItems: [],
     drafts: [],
   }
@@ -394,6 +400,37 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       },
     }
 
+    const notificationReadOverrides = new Map<string, string>()
+    let markAllReadAt: string | null = null
+    const effectiveReadAt = (n: NotificationRecord): string | null =>
+      notificationReadOverrides.get(n.id) ?? (n.readAt ? n.readAt : markAllReadAt) ?? null
+    const tenantNotifications = (): NotificationRecord[] =>
+      stores.notifications
+        .filter((n) => n.tenantId === tenantId)
+        .map((n) => ({ ...n, readAt: effectiveReadAt(n) }))
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
+
+    const notifications: NotificationRepository = {
+      async list(query) {
+        const rows = tenantNotifications().filter((n) => !query.unreadOnly || n.readAt === null)
+        return rows.slice(0, query.limit)
+      },
+      async countUnread() {
+        return tenantNotifications().filter((n) => n.readAt === null).length
+      },
+      async markRead(id, at) {
+        const n = stores.notifications.find((x) => x.id === id && x.tenantId === tenantId)
+        if (!n || effectiveReadAt(n) !== null) return false
+        notificationReadOverrides.set(id, at)
+        return true
+      },
+      async markAllRead(at) {
+        const n = tenantNotifications().filter((x) => x.readAt === null).length
+        markAllReadAt = at
+        return n
+      },
+    }
+
     const entities: EntityRepository = {
       async create(entity, evaluation) {
         if (entity.tenantId !== tenantId || evaluation.tenantId !== tenantId) {
@@ -419,6 +456,7 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
       claims,
       requests,
       snapshots,
+      notifications,
       async audit(ev) {
         stagedAudit.push({
           id: `aud_${randomUUID()}`,
@@ -475,6 +513,11 @@ export function inMemoryUnitOfWork(stores: InMemoryStores): UnitOfWork {
     for (const s of stagedSubmissions) stores.submissions.push(s)
     for (const ri of stagedResponseItems) stores.responseItems.push(ri)
     for (const s of stagedSnapshots) stores.snapshots.push(s)
+    for (const n of stores.notifications) {
+      if (n.tenantId !== tenantId) continue
+      const at = notificationReadOverrides.get(n.id) ?? (n.readAt === null ? markAllReadAt : null)
+      if (at && n.readAt === null) n.readAt = at
+    }
     for (const [id, s] of requestStatusOverrides) {
       const r = stores.requests.find((x) => x.id === id)
       if (r) r.status = s

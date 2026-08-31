@@ -8,6 +8,7 @@ import { AuditService } from './services/audit.js'
 import { ClaimService } from './services/claims.js'
 import { ContributorService, RequestService, type ResolveGrant } from './services/requests.js'
 import { SnapshotService } from './services/snapshots.js'
+import { NotificationService } from './services/notifications.js'
 import { registerHealthRoutes } from './routes/health.js'
 import { registerPackRoutes } from './routes/packs.js'
 import { registerEntityRoutes } from './routes/entities.js'
@@ -15,6 +16,7 @@ import { registerAuditRoutes } from './routes/audit.js'
 import { registerClaimRoutes } from './routes/claims.js'
 import { registerRequestRoutes } from './routes/requests.js'
 import { registerSnapshotRoutes } from './routes/snapshots.js'
+import { registerNotificationRoutes } from './routes/notifications.js'
 import { registerContributorRoutes } from './routes/contributor.js'
 
 /** Repo `packs/` directory, resolved from this file (works in dev, test, and the bundle). */
@@ -71,6 +73,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       await registerClaimRoutes(v1, { claims: new ClaimService(unitOfWork, registry) })
       await registerRequestRoutes(v1, { requests: new RequestService(unitOfWork, registry) })
       await registerSnapshotRoutes(v1, { snapshots: new SnapshotService(unitOfWork, registry) })
+      await registerNotificationRoutes(v1, { notifications: new NotificationService(unitOfWork) })
     },
     { prefix: '/api/v1' },
   )

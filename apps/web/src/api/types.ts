@@ -190,6 +190,23 @@ export interface ContributorReceipt {
   note: string
 }
 
+export interface NotificationRecord {
+  id: string
+  eventTopic: string
+  title: string
+  body: string
+  entityId: string | null
+  targetType: string | null
+  targetId: string | null
+  readAt: string | null
+  createdAt: string
+}
+
+export interface NotificationList {
+  notifications: NotificationRecord[]
+  unreadCount: number
+}
+
 export interface SnapshotSummary {
   id: string
   entityId: string

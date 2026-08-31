@@ -37,6 +37,21 @@ multiple instances (`FOR UPDATE SKIP LOCKED`).
 Enabled when `APP_DATABASE_URL` is set; runs on an `EXPIRY_SWEEP_INTERVAL_MS`
 timer (default 60s).
 
+## Events consumer → notifications (migration 0010)
+
+`consumeEventsOnce()` drains a batch from the events queue (the same one the
+relay publishes to). For each message: `eventToNotification()` maps the domain
+event to a per-tenant `notification` row (or `null` for the operator's own
+actions and plumbing — `request.created`, `request.sent`, …); `handleEvent()`
+writes the row (`pgNotificationWriter`, as `rre_app` under the event's tenant)
+and best-effort delivers it externally (`slackWebhookNotifier` when
+`SLACK_WEBHOOK_URL` is set, else `consoleNotifier`). A message is
+`DeleteMessage`d only after its handler resolves; a handler failure leaves it
+for SQS redelivery; an unparseable body is dropped.
+
+Enabled when `SQS_EVENTS_QUEUE_URL` and `APP_DATABASE_URL` are set; runs on an
+`EVENT_CONSUMER_INTERVAL_MS` timer (default 3s).
+
 ## Queue handlers
 
 `src/handlers.ts` — one stub per SQS queue (scan-result, OCR, extraction, export,

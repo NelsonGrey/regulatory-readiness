@@ -407,3 +407,17 @@ blockquote.rre-note {
   font-weight: 600;
   padding: 0 0.4rem;
 }
+
+.rre-badge-count {
+  display: inline-block;
+  min-width: 1.2em;
+  padding: 0 0.35em;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.72rem;
+  text-align: center;
+}
+.rre-queue-item[data-unread='true'] {
+  border-left: 3px solid var(--accent);
+}
