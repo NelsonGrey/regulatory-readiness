@@ -15,7 +15,7 @@ This project is in a pre-release "proposed/discovery" stage. Only the code curre
 This repository doesn't have a public issue tracker, so please don't report security concerns that way. Use one of:
 
 - GitHub's [private vulnerability reporting](https://github.com/NelsonGrey/regulatory-readiness/security/advisories/new) (enabled on this repo), or
-- Email **security@nelsongrey.com** (or **support@nelsongrey.com**)
+- Email **support@nelsongrey.com**
 
 Either way, include:
 
