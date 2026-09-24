@@ -1,13 +1,17 @@
 export const siteConfig = {
-  name: 'Regulatory Readiness',
+  name: 'Parato',
+  /** Category descriptor — always shown near the name. */
+  category: 'Regulatory evidence readiness',
+  /** One-line tagline. */
+  tagline: "Know what's evidenced. See what's missing.",
   legalName: 'TODO: owner to supply legal entity name',
   address: 'TODO: owner to supply registered address',
   description:
     'Regulatory evidence readiness for organizations preparing source-linked, reviewable records.',
-  appUrl: import.meta.env.PUBLIC_APP_URL ?? 'https://app.readiness.example',
-  contactEmail: 'hello@readiness.example',
-  securityEmail: 'security@readiness.example',
-  pressEmail: 'press@readiness.example',
+  appUrl: import.meta.env.PUBLIC_APP_URL ?? 'https://app.parato.example',
+  contactEmail: 'hello@parato.example',
+  securityEmail: 'security@parato.example',
+  pressEmail: 'press@parato.example',
 } as const
 
 /** Where the "Start free" / "Sign in" actions go. */

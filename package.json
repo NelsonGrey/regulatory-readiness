@@ -2,7 +2,7 @@
   "name": "regulatory-readiness",
   "version": "0.0.0",
   "private": true,
-  "description": "Regulatory Readiness Engine — one vertical-neutral engine plus data-defined control packs",
+  "description": "Parato — one vertical-neutral engine plus data-defined control packs",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=22"

@@ -19,7 +19,7 @@ Binding requirements that shape the choice:
 
 ## Decision
 
-Build the Regulatory Readiness Engine on **AWS**.
+Build Parato on **AWS**.
 
 - **Primary region:** `eu-west-1` (Ireland). See [ARCHITECTURE_AWS.md](../ARCHITECTURE_AWS.md) §3 for rationale (SES inbound email availability, Textract, Bedrock, Aurora/RDS, and EU residency in one region).
 - **Account topology:** AWS Organizations with separate accounts per environment plus dedicated security/log-archive and shared-services accounts; Service Control Policies restrict usage to approved EU regions.

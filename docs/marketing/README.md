@@ -12,6 +12,14 @@ Related: [ENGINE_CONCEPT.md](../ENGINE_CONCEPT.md) · [engine/BUSINESS_REQUIREME
 
 > **Superseded, Aug 2026 — commercial model.** The product now ships a full **self-serve SaaS** (self sign-up, plan tiers, Stripe checkout, guided onboarding). The site was rebuilt to match: every primary CTA is **"Start free"** → `/sign-up`; there is **no scheduler and no concierge Regulatory Readiness Sprint**. `/pricing` shows the three self-serve plans (Trial / Starter / Growth) from `apps/marketing/src/config.ts`. Sections below that describe "book a readiness sprint", "concierge-first", "no self-serve signup", or the EUR 750–1,500 sprint range are historical — read them for tone and guardrails, not for the funnel.
 
+> **Commercial checkpoint, Sep 2026.** The
+> [current viability reassessment](../VIABILITY_REASSESSMENT_2026-09-24.md)
+> concludes that the implemented self-serve funnel is not market-validated and
+> recommends a narrow, partner-led EAA evidence-workflow offer before production
+> launch. Treat the existing site as an implemented product hypothesis, not the
+> approved go-to-market plan; revise its audience and conversion path only after
+> the proposed paid validation.
+
 ---
 
 ## 1. What the marketing site is — and is not
@@ -32,7 +40,7 @@ Related: [ENGINE_CONCEPT.md](../ENGINE_CONCEPT.md) · [engine/BUSINESS_REQUIREME
 Pulled from [BRD §3](../engine/BUSINESS_REQUIREMENTS.md) and [ENGINE_CONCEPT](../ENGINE_CONCEPT.md); do not re-invent it.
 
 - **Category:** regulatory evidence readiness.
-- **Positioning statement:** *For small and mid-size organizations that must prepare information for a regulation, the Regulatory Readiness Engine collects evidence from internal owners and outside parties, maps it to versioned requirements, and produces a reviewable export. Unlike single-regulation point tools, generic document repositories, or enterprise data platforms, it makes missing information, contradictions, provenance, and source changes explicit before publication — and does so for multiple regulations on one platform.*
+- **Positioning statement:** *For small and mid-size organizations that must prepare information for a regulation, Parato collects evidence from internal owners and outside parties, maps it to versioned requirements, and produces a reviewable export. Unlike single-regulation point tools, generic document repositories, or enterprise data platforms, it makes missing information, contradictions, provenance, and source changes explicit before publication — and does so for multiple regulations on one platform.*
 - **The honesty hook (the site's spine):** we will never tell you that you are "compliant". We show you exactly what is **evidenced, missing, conflicting, stale, conditional, or not yet required**, per requirement, with a source behind every approved value — and hand you a dated package you can give to an auditor, authority, customer, or filing system.
 - **One engine + a library of packs.** Adding a regulation is adding a pack (data + declared rules), not a fork. First pack: **EU Accessibility Act readiness (Ireland)** — enforcement live since 28 June 2025.
 - **Concierge-first.** The first engagement is a scoped sprint with an assisted review call, not an unvalidated subscription.
@@ -299,7 +307,7 @@ M0–M4 can ship the site on staging (or a soft-launch domain) using the schedul
 
 ## 16. Open decisions for the owner
 
-1. **Product / brand name + domain(s).** "Regulatory Readiness Engine" is a placeholder, not trademark-cleared ([ENGINE_CONCEPT](../ENGINE_CONCEPT.md)). The site can't launch publicly without a cleared name and a domain. Interim: build under a codename, keep the wordmark a single swappable component + token.
+1. **Product / brand name + domain(s).** "Parato" is the current candidate name; trademark and domain clearance are pending ([ENGINE_CONCEPT](../ENGINE_CONCEPT.md)). The site can't launch publicly until the name clears and the domains are held. The wordmark is a single swappable component (`src/components/Wordmark.astro`) + the `siteConfig.name` token, so a change is one edit.
 2. **Legal entity name + registered address** for the footer and legal pages (NelsonGrey, or a new company?).
 3. **Who drafts binding legal copy** (privacy / terms / DPA). Codex scaffolds structure only.
 4. **Scheduling tool:** Cal.com self-hosted (data residency, no third-party cookies) vs a SaaS scheduler.

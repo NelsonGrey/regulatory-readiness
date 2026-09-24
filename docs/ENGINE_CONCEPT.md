@@ -1,13 +1,18 @@
-# Regulatory Readiness Engine — Product Concept
+# Parato — Product Concept
 
 **Document type:** Product Concept / Platform Framing
 **Version:** 0.1
 **Status:** Proposed / discovery
-**Last updated:** August 30, 2026
+**Last updated:** September 24, 2026
 **Owner:** Mark Nelson
-**Working product name:** Regulatory Readiness Engine (placeholder; not trademark-cleared)
+**Working product name:** Parato (candidate name; trademark + domain clearance pending)
 
 Related documents: [engine/README.md](engine/README.md) — vertical-neutral [Business Requirements](engine/BUSINESS_REQUIREMENTS.md), [Technical Requirements](engine/TECHNICAL_REQUIREMENTS.md), and [Detailed Design](engine/detailed-design/README.md). Platform: [AWS Architecture](ARCHITECTURE_AWS.md) and [ADR 0001 — Build on AWS](adr/0001-cloud-platform-aws.md). Regulation specifics: [packs/](packs/).
+
+Current commercial assessment: [Product viability reassessment — September 24,
+2026](VIABILITY_REASSESSMENT_2026-09-24.md). It supersedes the sequencing claims
+in section 6 where they conflict: EAA is now a discovery domain for a partner-led
+offer, not an assumed self-serve funding wedge.
 
 > This platform prepares and organizes the evidence needed to demonstrate readiness for a specific regulation. It does not provide legal advice, conformity assessment, certification, guaranteed compliance, or submission to any authority.
 
@@ -15,7 +20,7 @@ Related documents: [engine/README.md](engine/README.md) — vertical-neutral [Bu
 
 ## 1. Summary
 
-The Regulatory Readiness Engine is a multi-tenant platform that helps small and mid-size organizations assemble, validate, version, and export the evidence needed to prepare for a specific regulation — while keeping missing, conflicting, stale, and unreviewed information visible, and without ever claiming legal compliance.
+Parato is a multi-tenant platform that helps small and mid-size organizations assemble, validate, version, and export the evidence needed to prepare for a specific regulation — while keeping missing, conflicting, stale, and unreviewed information visible, and without ever claiming legal compliance.
 
 The platform is **one reusable engine** plus a growing library of **control packs**. Each pack encodes one regulation as a dated, versioned catalog of discrete controls, with applicability rules, evidence expectations, field validators, and export profiles. Adding a regulation is adding a pack — mostly data and declared rules, not a code fork.
 
@@ -89,7 +94,7 @@ Regulatory dates and scope below are indicative and MUST be verified from primar
 | Pack | Primary buyer | Timing | Status |
 | --- | --- | --- | --- |
 | EAA accessibility readiness | B2C digital businesses, agencies | Enforcement since June 2025 | **Proposed pack #1** |
-| EUDR due diligence | SME importers (coffee, cocoa, timber, soy, palm, rubber, cattle) | SME obligations ~mid-2026 | Candidate |
+| EUDR due diligence | Importers and operators in covered commodities | Application from December 30, 2026, with additional time for micro and small operators | Hold pending revised discovery |
 | ESPR DPP — batteries | LMT/EV/industrial battery operators | February 2027 | Origin design; `docs/` package |
 | EU AI Act conformity readiness | Providers/deployers of high-risk AI | High-risk obligations 2026–2027 | Candidate |
 | CSRD / VSME reporting | Mid-size companies; small suppliers answering buyer questionnaires | In flux (EU Omnibus simplification) | **Hold** until scope settles |
@@ -114,12 +119,21 @@ SOC 2 / ISO 27001 / ISO 9001 audit readiness; GDPR ROPA / DPIA documentation; gr
 
 ### Sequencing
 
-1. **Build the engine against EAA accessibility as pack #1.** Largest live market, enforcement already in force, strong willingness to pay, soft mid-bottom competitive layer. This funds engine development.
-2. **CRA as pack #2.** A very different domain from accessibility; proves the pack abstraction holds, and the affected population (every connected or software product sold in the EU) is enormous.
-3. **Then EUDR or ESPR-DPP batteries**, chosen by which customer relationships form during packs #1 and #2.
-4. **Hold CSRD, CSDDD, and CBAM** until the EU Omnibus simplification package settles — a pack built now could need major rework.
+1. **Validate EAA as a partner-led discovery domain.** Test the evidence workflow
+   with accessibility consultancies or agencies managing multiple client matters;
+   do not compete as another scanner or assume self-serve demand.
+2. **Refresh and govern the EAA pack.** Preserve the current harmonized baseline
+   while monitoring EN 301 549 v4.1.1 and its Official Journal status.
+3. **Evaluate CRA documentation readiness as pack #2.** Keep live incident
+   reporting outside scope unless the product boundary is deliberately changed.
+4. **Hold EUDR, CSRD, and CSDDD** until their revised scope, timing, buyer, and
+   willingness to pay are revalidated. Treat battery passports as a possible
+   evidence-layer partnership, not an assumed passport-publishing wedge.
 
-Battery passport was the origin design, but February 2027 timing and a narrower buyer make it a weaker pack #1 than accessibility.
+Battery passport was the origin design. Its February 2027 deadline is now close,
+but specialist competition makes a generic passport publisher a weak entry
+position. Supplier evidence preparation may still fit through a partner or
+integration proposition.
 
 ## 7. Fit test for admitting a new pack
 

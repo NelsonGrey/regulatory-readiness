@@ -1,4 +1,4 @@
-# Regulatory Readiness Engine — Technical Requirements
+# Parato — Technical Requirements
 
 **Document type:** Technical Requirements Document (TRD)
 **Version:** 0.1

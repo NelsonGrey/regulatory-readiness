@@ -1,6 +1,6 @@
 # Marketing site
 
-Static Astro site for the public, pre-login Regulatory Readiness experience. The implementation follows [`docs/marketing/README.md`](../../docs/marketing/README.md).
+Static Astro site for the public, pre-login Parato experience. The implementation follows [`docs/marketing/README.md`](../../docs/marketing/README.md).
 
 ## Run locally
 

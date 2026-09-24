@@ -1,4 +1,4 @@
-# Regulatory Readiness Engine — Detailed Design
+# Parato — Detailed Design
 
 **Version:** 0.1
 **Design baseline:** August 30, 2026

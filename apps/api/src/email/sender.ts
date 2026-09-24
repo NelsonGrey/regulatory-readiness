@@ -33,7 +33,7 @@ export function consoleEmailSender(
 
 export interface ResendConfig {
   apiKey: string
-  /** The verified `From:` address, e.g. `Regulatory Readiness <hello@rre.example>`. */
+  /** The verified `From:` address, e.g. `Parato <hello@parato.example>`. */
   from: string
   fetchImpl?: typeof fetch
 }

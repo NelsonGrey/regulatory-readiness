@@ -1,4 +1,4 @@
-# Regulatory Readiness Engine — Business Requirements
+# Parato — Business Requirements
 
 **Document type:** Business Requirements Document (BRD)
 **Version:** 0.1
@@ -8,7 +8,13 @@
 
 Related documents: [ENGINE_CONCEPT.md](../ENGINE_CONCEPT.md), [Technical Requirements](TECHNICAL_REQUIREMENTS.md), [Detailed Design](detailed-design/README.md). Vertical-neutral; regulation specifics live in [control packs](../packs/).
 
-> The Regulatory Readiness Engine prepares and organizes the evidence an organization needs to demonstrate readiness for a specific regulation. It does not provide legal advice, conformity assessment, certification, guaranteed compliance, or submission to any authority.
+Commercial validation note: the September 24, 2026
+[viability reassessment](../VIABILITY_REASSESSMENT_2026-09-24.md) narrows the
+recommended entry offer to a partner-led EAA evidence-workflow validation. The
+self-serve plans and pricing below remain hypotheses and are not the current
+launch recommendation.
+
+> Parato prepares and organizes the evidence an organization needs to demonstrate readiness for a specific regulation. It does not provide legal advice, conformity assessment, certification, guaranteed compliance, or submission to any authority.
 
 ---
 
@@ -51,7 +57,7 @@ Every regulated value should have an identifiable owner, an applicability basis,
 
 ### 3.2 Positioning statement
 
-For small and mid-size organizations that must prepare information for a regulation, the Regulatory Readiness Engine collects evidence from internal owners and outside parties, maps it to versioned requirements, and produces a reviewable export. Unlike single-regulation point tools, generic document repositories, or enterprise data platforms, it makes missing information, contradictions, provenance, and source changes explicit before publication — and does so for multiple regulations on one platform.
+For small and mid-size organizations that must prepare information for a regulation, Parato collects evidence from internal owners and outside parties, maps it to versioned requirements, and produces a reviewable export. Unlike single-regulation point tools, generic document repositories, or enterprise data platforms, it makes missing information, contradictions, provenance, and source changes explicit before publication — and does so for multiple regulations on one platform.
 
 ### 3.3 Category
 

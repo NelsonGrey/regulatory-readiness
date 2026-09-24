@@ -12,7 +12,7 @@ const breadcrumbLd = { '@context':'https://schema.org', '@type':'BreadcrumbList'
 ] }
 ---
 
-<BaseLayout title={entry.data.title} description={`${entry.data.title} for the Regulatory Readiness public website.`} jsonLd={breadcrumbLd}>
+<BaseLayout title={entry.data.title} description={`${entry.data.title} for the Parato public website.`} jsonLd={breadcrumbLd}>
   <header class="legal-header"><div class="narrow"><p class="eyebrow">Legal</p><h1>{entry.data.title}</h1><p>Last updated <time datetime={entry.data.lastUpdated.toISOString()}>{entry.data.lastUpdated.toLocaleDateString('en-IE', { day:'numeric', month:'long', year:'numeric' })}</time></p></div></header>
   <article class="legal-doc"><div class="narrow prose"><Content /></div></article>
 </BaseLayout>

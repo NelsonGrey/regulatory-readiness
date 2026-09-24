@@ -1,6 +1,6 @@
 # Contributing
 
-Regulatory Readiness Engine is closed-source. The source is publicly visible, but this isn't an open-source project — there's no public issue tracker and outside pull requests aren't accepted.
+Parato is closed-source. The source is publicly visible, but this isn't an open-source project — there's no public issue tracker and outside pull requests aren't accepted.
 
 If you have collaborator access to this repository:
 

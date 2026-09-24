@@ -1,4 +1,4 @@
-# Regulatory Readiness Engine — AWS Architecture
+# Parato — AWS Architecture
 
 **Document type:** Reference Architecture
 **Version:** 0.1

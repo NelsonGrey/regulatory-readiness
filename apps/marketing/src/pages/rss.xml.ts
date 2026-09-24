@@ -5,7 +5,7 @@ import type { APIContext } from 'astro'
 export async function GET(context: APIContext) {
   const posts = await getCollection('posts', ({ data }) => !data.draft)
   return rss({
-    title: 'Regulatory Readiness deadline briefings',
+    title: 'Parato deadline briefings',
     description: 'Methods, source changes, and practical regulatory evidence preparation.',
     site: context.site!,
     items: posts.map((post) => ({

@@ -1,4 +1,4 @@
-# Regulatory Readiness Engine — Requirements & Design
+# Parato — Requirements & Design
 
 This folder holds the **vertical-neutral** requirements and design for the engine. It contains no regulation-specific content. Each regulation is defined by a **control pack** under [`../packs/`](../packs/).
 

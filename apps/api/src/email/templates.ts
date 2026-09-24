@@ -16,8 +16,8 @@ export interface InviteEmailInput {
 export function inviteEmail(input: InviteEmailInput): EmailMessage {
   const expires = new Date(input.expiresAt).toUTCString()
   const text = [
-    `${input.inviterEmail} has invited you to the "${input.workspaceName}" workspace on the`,
-    `Regulatory Readiness Engine as a ${input.role}.`,
+    `${input.inviterEmail} has invited you to the "${input.workspaceName}" workspace on`,
+    `Parato as a ${input.role}.`,
     ``,
     `Accept the invite: ${input.acceptUrl}`,
     ``,
@@ -26,7 +26,7 @@ export function inviteEmail(input: InviteEmailInput): EmailMessage {
 
   const html = [
     `<p><strong>${esc(input.inviterEmail)}</strong> has invited you to the `,
-    `<strong>${esc(input.workspaceName)}</strong> workspace on the Regulatory Readiness Engine `,
+    `<strong>${esc(input.workspaceName)}</strong> workspace on Parato `,
     `as a ${esc(input.role)}.</p>`,
     `<p><a href="${esc(input.acceptUrl)}">Accept the invite</a></p>`,
     `<p style="color:#666;font-size:13px">This link is single-use and expires ${esc(expires)}. `,

@@ -1,8 +1,8 @@
-# Regulatory Readiness Engine
+# Parato
 
 **Status:** Proposed / discovery
 **Baseline date:** August 30, 2026
-**Working product name:** Regulatory Readiness Engine (placeholder; not trademark-cleared)
+**Working product name:** Parato (candidate name; trademark + domain clearance pending)
 
 A multi-tenant platform that helps small and mid-size organizations assemble, validate, version, and export the evidence needed to prepare for a specific regulation — keeping missing, conflicting, stale, and unreviewed information visible, and never claiming legal compliance, certification, or authority approval.
 
@@ -13,6 +13,7 @@ The platform is **one reusable engine** plus a library of **control packs**. Eac
 | Document | Purpose |
 | --- | --- |
 | [docs/ENGINE_CONCEPT.md](docs/ENGINE_CONCEPT.md) | Platform framing: engine primitives, the control-pack contract, the pack portfolio and sequencing, the fit test, next steps |
+| [docs/VIABILITY_REASSESSMENT_2026-09-24.md](docs/VIABILITY_REASSESSMENT_2026-09-24.md) | Current viability checkpoint: changed regulation and competition, revised partner-led entry hypothesis, validation gate |
 | [docs/engine/README.md](docs/engine/README.md) | Vertical-neutral requirements and design — start of the engine spec |
 | [docs/engine/BUSINESS_REQUIREMENTS.md](docs/engine/BUSINESS_REQUIREMENTS.md) | Customers, personas, jobs, `BR-*`, readiness policy, commercial model, MVP acceptance |
 | [docs/engine/TECHNICAL_REQUIREMENTS.md](docs/engine/TECHNICAL_REQUIREMENTS.md) | Architecture, domain model, control/version model, `TR-*`, extraction, APIs, nonfunctional targets, `FSG-*` |

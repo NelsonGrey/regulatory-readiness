@@ -140,7 +140,7 @@ export function Shell(): ReactElement {
       <header className="rre-header">
         <div className="rre-header-main">
           <Link to="/" className="rre-brand">
-            Regulatory Readiness Engine
+            Parato
           </Link>
           <nav className="rre-nav">
             <Link to="/">Dashboard</Link>

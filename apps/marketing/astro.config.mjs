@@ -4,7 +4,7 @@ import { defineConfig } from 'astro/config'
 import process from 'node:process'
 
 export default defineConfig({
-  site: process.env.PUBLIC_SITE_URL ?? 'https://readiness.example',
+  site: process.env.PUBLIC_SITE_URL ?? 'https://parato.example',
   integrations: [mdx(), sitemap()],
   output: 'static',
   build: { format: 'directory' },
