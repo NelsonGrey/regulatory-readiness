@@ -1,7 +1,7 @@
 import { generateKeyPairSync, sign } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
 import type { FastifyRequest } from 'fastify'
-import { headerVerifier, jwtVerifier } from './verifier.js'
+import { configuredPrincipalVerifier, headerVerifier, jwtVerifier } from './verifier.js'
 import { verifyJwt, type Jwks } from './jwt.js'
 
 const ISS = 'https://idp.test'
@@ -107,5 +107,26 @@ describe('headerVerifier', () => {
     expect(p).toMatchObject({ email: 'dev@acme.test', name: 'Dev' })
     expect(p?.userId).toMatch(/^usr_[0-9a-f]{24}$/)
     expect(await v.verify(req({}))).toBeNull()
+  })
+})
+
+describe('configuredPrincipalVerifier', () => {
+  it('fails closed when runtime authentication is not configured', () => {
+    expect(() => configuredPrincipalVerifier({ devAuth: false, production: false })).toThrow(
+      'authentication is not configured',
+    )
+  })
+
+  it('refuses header authentication in production even when DEV_AUTH is set', () => {
+    expect(() => configuredPrincipalVerifier({ devAuth: true, production: true })).toThrow(
+      'authentication is not configured',
+    )
+  })
+
+  it('allows the header stand-in only in explicit non-production dev mode', async () => {
+    const verifier = configuredPrincipalVerifier({ devAuth: true, production: false })
+    await expect(verifier.verify(req({ 'x-user-email': 'dev@acme.test' }))).resolves.toMatchObject({
+      email: 'dev@acme.test',
+    })
   })
 })
