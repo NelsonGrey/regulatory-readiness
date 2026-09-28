@@ -15,9 +15,17 @@ on:
       - 'packages/brand/**'
       - 'packages/copy-guard/**'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: marketing-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify-marketing:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -41,6 +49,7 @@ jobs:
     if: github.event_name == 'push' && vars.MARKETING_DEPLOY_ENABLED == 'true'
     needs: verify-marketing
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       id-token: write
       contents: read
