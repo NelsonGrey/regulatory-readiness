@@ -10,9 +10,28 @@ export interface PrincipalVerifier {
   verify(req: FastifyRequest): Promise<Principal | null>
 }
 
+export interface PrincipalVerifierConfig {
+  issuer?: string
+  jwksUri?: string
+  audience?: string
+  devAuth: boolean
+  production: boolean
+}
+
 /** Dev stand-in: trust the `x-user-email` header (see `principalFromRequest`). */
 export function headerVerifier(): PrincipalVerifier {
   return { verify: async (req) => principalFromRequest(req) }
+}
+
+/** Select the runtime verifier without silently weakening authentication. */
+export function configuredPrincipalVerifier(cfg: PrincipalVerifierConfig): PrincipalVerifier {
+  if (cfg.issuer && cfg.jwksUri) {
+    return jwtVerifier({ issuer: cfg.issuer, jwksUri: cfg.jwksUri, audience: cfg.audience })
+  }
+  if (cfg.devAuth && !cfg.production) return headerVerifier()
+  throw new Error(
+    'authentication is not configured: set AUTH_JWT_ISSUER and AUTH_JWKS_URI, or use DEV_AUTH=1 outside production',
+  )
 }
 
 export interface JwtVerifierConfig {

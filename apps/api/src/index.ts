@@ -26,7 +26,7 @@ import {
 } from './billing/provider.js'
 import type { Plan } from './billing/plans.js'
 import { consoleEmailSender, resendEmailSender, type EmailSender } from './email/sender.js'
-import { headerVerifier, jwtVerifier, type PrincipalVerifier } from './auth/verifier.js'
+import { configuredPrincipalVerifier } from './auth/verifier.js'
 import type { ResolveGrant } from './services/requests.js'
 import { createLocalObjectStore, type ObjectStore } from './storage/object-store.js'
 import { createS3ObjectStore } from './storage/object-store.s3.js'
@@ -126,22 +126,19 @@ async function main(): Promise<void> {
   const objectStore = buildObjectStore()
   log.info('object store', { kind: objectStore.kind })
 
-  // A real IdP when AUTH_JWT_ISSUER + AUTH_JWKS_URI are set; the header stand-in
-  // otherwise. Works with any RS256 OIDC provider (Clerk, WorkOS, Auth0, …).
-  let principalVerifier: PrincipalVerifier
+  // Production fails closed unless a complete OIDC configuration is present.
+  // The header stand-in is available only through explicit non-production dev mode.
   const jwtIssuer = process.env.AUTH_JWT_ISSUER
   const jwksUri = process.env.AUTH_JWKS_URI
-  if (jwtIssuer && jwksUri) {
-    principalVerifier = jwtVerifier({
-      issuer: jwtIssuer,
-      jwksUri,
-      audience: process.env.AUTH_JWT_AUDIENCE,
-    })
-    log.info('auth', { verifier: 'jwt', issuer: jwtIssuer })
-  } else {
-    principalVerifier = headerVerifier()
-    log.warn('auth', { verifier: 'header-stand-in' })
-  }
+  const devAuth = process.env.DEV_AUTH === '1'
+  const principalVerifier = configuredPrincipalVerifier({
+    issuer: jwtIssuer,
+    jwksUri,
+    audience: process.env.AUTH_JWT_AUDIENCE,
+    devAuth,
+    production: process.env.NODE_ENV === 'production',
+  })
+  log.info('auth', { verifier: jwtIssuer && jwksUri ? 'jwt' : 'header-stand-in' })
 
   const maxDocumentBytes = process.env.DOCUMENT_MAX_BYTES
     ? Number(process.env.DOCUMENT_MAX_BYTES)
@@ -165,7 +162,7 @@ async function main(): Promise<void> {
     packSourceRepo,
     platformAdmins,
     requirePackActivation: process.env.ALLOW_DRAFT_PACKS !== '1',
-    devAuth: process.env.DEV_AUTH === '1',
+    devAuth,
   })
 
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {

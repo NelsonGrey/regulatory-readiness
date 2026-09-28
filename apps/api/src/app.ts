@@ -80,7 +80,7 @@ export interface BuildAppOptions {
   maxDocumentBytes?: number
   /** Tenancy control plane (users / workspaces / memberships). Defaults to in-memory. */
   accounts?: AccountsRepository
-  /** Resolves the signed-in person. Defaults to the `x-user-email` header stand-in. */
+  /** Resolves the signed-in person. Tests default to the `x-user-email` header stand-in. */
   principalVerifier?: PrincipalVerifier
   /** Subscription store. Defaults to in-memory. */
   billingRepo?: BillingRepository
