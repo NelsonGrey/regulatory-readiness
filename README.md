@@ -8,6 +8,59 @@ A multi-tenant platform that helps small and mid-size organizations assemble, va
 
 The platform is **one reusable engine** plus a library of **control packs**. Each pack encodes one regulation as a dated, versioned catalog of discrete controls, with applicability rules, evidence expectations, validators, and export profiles. Adding a regulation means adding a pack — mostly data and declared rules, not a code fork.
 
+## Demo
+
+The engine is a set of pure, replayable functions (`packages/control-catalog`, `packages/domain`) that turn a data-only control pack plus an entity's facts into a per-control readiness verdict. No regulation-specific code exists anywhere in the engine — `packs/eaa-accessibility/` (EU Accessibility Act, Ireland) and `packs/eu-battery-passport/` (EU Batteries Regulation) run through the exact same evaluator.
+
+```mermaid
+flowchart LR
+    subgraph Pack["Control pack (data, not code) — packs/eaa-accessibility/"]
+        manifest[manifest.json<br/>snapshotKey, status]
+        controls[controls.json<br/>20 controls]
+        rules[applicability/rules.json<br/>16 rules]
+        schema[entity-facts.schema.json]
+    end
+
+    subgraph Engine["Vertical-neutral engine"]
+        loader["loadPack / validatePack<br/>(control-catalog/pack.ts)"]
+        evalApp["evaluateApplicability<br/>(control-catalog/applicability.ts)"]
+        readiness["deriveControlReadiness →<br/>deriveEntityStatus<br/>(domain/control-readiness.ts, readiness.ts)"]
+    end
+
+    facts["Entity facts<br/>(e.g. hasWebsite, serviceType,<br/>isMicroEnterprise)"] --> evalApp
+    Pack --> loader --> evalApp
+    evalApp -->|"REQUIRED_BY_SNAPSHOT /<br/>NOT_APPLICABLE / OPTIONAL_IF_AVAILABLE"| readiness
+    claims["Claims + evidence<br/>(approved / pending / documents)"] --> readiness
+    readiness -->|"EVIDENCED / SELF_ATTESTED /<br/>MISSING / PENDING_REVIEW / ..."| matrix["Readiness matrix"]
+    matrix --> status["Entity status:<br/>BLOCKED / REVIEW_NEEDED / EVIDENCE_READY"]
+    matrix --> export["Canonical export<br/>(domain/export.ts) → JSON / CSV snapshot"]
+```
+
+### Walkthrough — real captured output
+
+This is genuine output from `evaluateApplicability` + `deriveControlReadiness`, run against the real EAA pack loaded with `loadPack('./packs/eaa-accessibility')` and the "Large bank: website + mobile app, not a micro-enterprise" fixture facts from `packs/eaa-accessibility/test-vectors.json`:
+
+```
+pack: eaa-accessibility (EU Accessibility Act (Directive 2019/882) — Ireland)
+snapshot: EAA-IE-EN549-V3.2.1-DRAFT, controls: 20
+
+applicability + readiness (no claims submitted yet):
+  EAA-EN549-9-1-1-1              REQUIRED_BY_SNAPSHOT         -> MISSING
+  EAA-EN549-9-1-4-3              REQUIRED_BY_SNAPSHOT         -> MISSING
+  EAA-EN549-10-1-1-1             NOT_APPLICABLE_TO_CLASSIFICATION -> NOT_APPLICABLE
+  EAA-EN549-9-2-4-11             OPTIONAL_IF_AVAILABLE        -> MISSING
+  EAA-SVC-ACCESSIBILITY-STATEMENT REQUIRED_BY_SNAPSHOT         -> MISSING
+  ... (20 controls total)
+
+entity status: BLOCKED
+```
+
+1. **Applicability is data-driven per fact, not hardcoded** — `EAA-EN549-10-1-1-1` (a biometric-auth control) evaluates to `NOT_APPLICABLE_TO_CLASSIFICATION` purely because this fixture's facts don't trigger the rule in `packs/eaa-accessibility/applicability/rules.json`; a bank with a different fact set would require it.
+2. **`REQUIRED_BY_SNAPSHOT` vs `OPTIONAL_IF_AVAILABLE`** comes straight from the pack's rule targets — the engine (`packages/control-catalog/src/applicability.ts`) never encodes which controls exist, only how to evaluate a rule tree of `all`/`any`/`not`/fact-predicates.
+3. With zero claims submitted, every required control is `MISSING` and `deriveEntityStatus` (`packages/domain/src/readiness.ts`) rolls that up to `BLOCKED` — the engine's precedence order (`BLOCKED` > `REVIEW_NEEDED` > `EVIDENCE_READY`) means one missing control blocks the whole entity regardless of how many others are evidenced.
+4. Submitting and approving a claim with a linked document moves a control's state to `EVIDENCED` (or `SELF_ATTESTED` without a document — see `deriveControlReadiness` in `packages/domain/src/control-readiness.ts`); only when every required control is `EVIDENCED` does the entity reach `EVIDENCE_READY`.
+5. The same run validated cleanly via `packages/control-catalog/src/pack.test.ts` and `applicability.test.ts` (`pnpm --filter @rre/control-catalog test` — 17/17 passing), which check this pack's 5 known-outcome test vectors, including the one shown above.
+
 ## Start here
 
 | Document | Purpose |
