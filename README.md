@@ -1,5 +1,17 @@
 # Parato
 
+[![CI](https://github.com/NelsonGrey/regulatory-readiness/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/NelsonGrey/regulatory-readiness/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-proprietary-lightgrey.svg)](https://github.com/NelsonGrey/regulatory-readiness/blob/develop/LICENSE)
+
+## Contents
+
+- [Demo](#demo)
+  - [Walkthrough — real captured output](#walkthrough-real-captured-output)
+- [Start here](#start-here)
+- [Status](#status)
+- [Build and develop](#build-and-develop)
+- [Proposed first pack](#proposed-first-pack)
+- [Platform](#platform)
+
 **Status:** Proposed / discovery
 **Baseline date:** August 30, 2026
 **Working product name:** Parato (candidate name; trademark + domain clearance pending)
@@ -79,7 +91,7 @@ entity status: BLOCKED
 | [docs/marketing/README.md](docs/marketing/README.md) | Vision & build-handoff spec for the public marketing site — IA, messaging, language guardrails, tech shape, milestones |
 | [docs/BUILD_STATUS.md](docs/BUILD_STATUS.md) | Retrospective after slice 28 — what shipped, the deliberate stand-ins and their swap-in points, and what a real launch still needs |
 
-## Current state
+## Status
 
 Full specification, a buildable monorepo, and the first slices of real engine code. `typecheck` / `lint` / `lint:copy` / `test` (330) / `build` / `format` all green.
 
